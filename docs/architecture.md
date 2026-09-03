@@ -1,6 +1,6 @@
 # Architecture: Internal Operations Service Hub
 
-Diagram: https://excalidraw.com/#json=P-FlDA-ILkWSdiOzNUhFZ,0QGBFwLiVJqF-J9R58hpeg
+Diagram: 
 
 ## ![Architecture design](assets/eurisko2026-architecturedesign.png)
 
