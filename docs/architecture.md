@@ -2,7 +2,7 @@
 
 Diagram: https://excalidraw.com/#json=P-FlDA-ILkWSdiOzNUhFZ,0QGBFwLiVJqF-J9R58hpeg
 
----
+## ![Architecture design](assets/eurisko2026-architecturedesign.png)
 
 ## 1. Purpose
 
