@@ -29,8 +29,10 @@ This document describes what the system stores, how the pieces relate to each ot
 | --------------- | ---------- | ------------- |
 | category_id     | PK         |               |
 | name            | text       | Admin-defined |
-| default_team_id | FK to Team |               |
+| default_team_id | FK to Team,nullable |  null only for the "Other" category, which has no default team              |
 | created_at      | timestamp  |               |
+
+One Category row, named 'Other,' is a permanent fixture with default_team_id left null. Selecting it is what triggers the manual team picker in the submission flow, since the system can tell there's no default to fall back to.
 
 **Priority:** a fixed, Admin-defined urgency level, each with its own default escalation window.
 
@@ -129,7 +131,7 @@ Each access creates its own row, so the same user opening the same request more 
 
 - A user can be the requester on many requests, though each request has exactly one requester. A team owns many requests, though each request has exactly one owning team at any given time. A user can belong to many teams, and a team can have many users as members, through TeamMembership. This is optional on both sides; an employee who never handles requests belongs to no team, and a team member is not limited to one team.
 
-- A category applies to many requests, though each request has exactly one category. Each category has exactly one default owning team, even though many categories can share the same default team. A priority level applies to many requests, though each request has exactly one priority.
+- A category applies to many requests, though each request has exactly one category. Each category has at most one default owning team, even though many categories can share the same default team. The one exception is the 'Other' category, which has no default team, which is what forces the requester to pick one manually. A priority level applies to many requests, though each request has exactly one priority.
 
 - A request can have at most one current claimant, and that claimant is a single user. This is optional, since a request may not be claimed by anyone yet.
 
