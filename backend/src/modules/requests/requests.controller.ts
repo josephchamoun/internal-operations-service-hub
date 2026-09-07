@@ -5,6 +5,7 @@ import { ClaimRequestDto } from './dto/claim-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { CancelRequestDto } from './dto/cancel-request.dto';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
+import { UpdatePriorityDto } from './dto/update-priority.dto';
 
 @Controller('requests')
 export class RequestsController {
@@ -67,5 +68,10 @@ export class RequestsController {
   @Get(':id/access-logs')
   findAccessLogs(@Param('id') id: string, @Query('actorId') actorId: string) {
     return this.requestsService.findAccessLogsForRequest(id, actorId);
+  }
+
+  @Patch(':id/priority')
+  updatePriority(@Param('id') id: string, @Body() dto: UpdatePriorityDto) {
+    return this.requestsService.updatePriority(id, dto);
   }
 }

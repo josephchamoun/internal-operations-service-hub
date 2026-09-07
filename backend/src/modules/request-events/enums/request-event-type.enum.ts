@@ -3,5 +3,6 @@ export enum RequestEventType {
   CLAIMED = 'claimed',
   UNCLAIMED = 'unclaimed',
   REASSIGNED = 'reassigned',
+  PRIORITY_CHANGED = 'priority_changed',
   ESCALATION_REMINDER = 'escalation_reminder',
 }

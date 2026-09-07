@@ -22,6 +22,7 @@ import { AccessLogsService } from '../access-logs/access-logs.service';
 import { RequestEventEntity } from '../request-events/entities/request-event.entity';
 import { TeamsService } from '../teams/teams.service';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
+import { UpdatePriorityDto } from './dto/update-priority.dto';
 
 
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
@@ -288,6 +289,29 @@ export class RequestsService {
     }
     const all = await this.repo.findAll();
     return all.filter((r) => actor.teamIds.includes(r.owningTeamId));
+  }
+
+  async updatePriority(id: string, dto: UpdatePriorityDto): Promise<RequestEntity> {
+    const request = await this.requireRequest(id);
+    this.assertNotTerminal(request, 'updated');
+
+    const actor = await this.usersService.findOne(dto.actorId);
+    this.assertBelongsToTeam(actor, request.owningTeamId);
+
+    await this.prioritiesService.findOne(dto.priorityId); // validates it's a real priority
+
+    const previousPriorityId = request.priorityId;
+    const updated = (await this.repo.update(id, { priorityId: dto.priorityId })) as RequestEntity;
+
+    await this.requestEventsService.append({
+      requestId: id,
+      eventType: RequestEventType.PRIORITY_CHANGED, 
+      actorId: actor.id,
+      fromValue: previousPriorityId,
+      toValue: dto.priorityId,
+    });
+
+    return updated;
   }
 
   private assertNotTerminal(request: RequestEntity, action: string): void {
