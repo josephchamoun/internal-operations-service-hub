@@ -1,0 +1,146 @@
+[
+  {
+    "id": "5773b7ff-b01b-40ea-8c08-4e947ef48291",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "claimed",
+    "actorId": "it-agent-1",
+    "fromValue": null,
+    "toValue": "it-agent-1",
+    "createdAt": "2026-09-05T19:19:56.158Z"
+  },
+  {
+    "id": "62ff43cf-9426-4894-b310-f406d8ee6348",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "unclaimed",
+    "actorId": "it-agent-1",
+    "fromValue": "it-agent-1",
+    "toValue": null,
+    "createdAt": "2026-09-05T19:31:31.186Z"
+  },
+  {
+    "id": "538ab401-f716-409b-b7f8-36eae8e3f0aa",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "claimed",
+    "actorId": "it-agent-1",
+    "fromValue": null,
+    "toValue": "it-agent-1",
+    "createdAt": "2026-09-05T19:36:05.952Z"
+  },
+  {
+    "id": "22fdd99d-9563-478e-ae47-5ac48bfeacd5",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "status_change",
+    "actorId": "it-agent-1",
+    "fromValue": "New",
+    "toValue": "Resolved",
+    "createdAt": "2026-09-05T19:38:56.700Z"
+  },
+  {
+    "id": "5b5fb264-0b3d-4037-93dd-887e539ebd1c",
+    "requestId": "02562336-3fb4-4e43-af90-e00768f4a76e",
+    "eventType": "claimed",
+    "actorId": "it-agent-2",
+    "fromValue": null,
+    "toValue": "it-agent-2",
+    "createdAt": "2026-09-05T19:41:59.526Z"
+  },
+  {
+    "id": "c9d3a67f-e5c1-4947-b381-1854213edd75",
+    "requestId": "02562336-3fb4-4e43-af90-e00768f4a76e",
+    "eventType": "status_change",
+    "actorId": "it-agent-2",
+    "fromValue": "New",
+    "toValue": "In Progress",
+    "createdAt": "2026-09-05T19:44:29.797Z"
+  },
+  {
+    "id": "9b7c1870-9673-412a-8253-f65b41d3687b",
+    "requestId": "02562336-3fb4-4e43-af90-e00768f4a76e",
+    "eventType": "status_change",
+    "actorId": "u1",
+    "fromValue": "In Progress",
+    "toValue": "Cancelled",
+    "createdAt": "2026-09-05T19:53:59.504Z"
+  },
+  {
+    "id": "75b09cf2-99c1-4b94-b296-487820505b10",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "status_change",
+    "actorId": "u1",
+    "fromValue": "In Progress",
+    "toValue": "Cancelled",
+    "createdAt": "2026-09-05T19:55:51.962Z"
+  },
+  {
+    "id": "609c8c64-8894-44db-ad2f-80001feffb5c",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "status_change",
+    "actorId": "u1",
+    "fromValue": "New",
+    "toValue": "Cancelled",
+    "createdAt": "2026-09-05T19:56:11.029Z"
+  },
+  {
+    "id": "35334f42-8807-46fc-a193-a01cbb679a85",
+    "requestId": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "eventType": "status_change",
+    "actorId": "u1",
+    "fromValue": "New",
+    "toValue": "Cancelled",
+    "createdAt": "2026-09-05T19:56:31.950Z"
+  },
+  {
+    "id": "fe4bafbd-eb9d-4f16-9aeb-b6223378e35d",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "claimed",
+    "actorId": "it-agent-2",
+    "fromValue": null,
+    "toValue": "it-agent-2",
+    "createdAt": "2026-09-06T18:34:42.175Z"
+  },
+  {
+    "id": "6a603bfb-d762-4836-9e54-e69caeb1d0e3",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "reassigned",
+    "actorId": "it-agent-1",
+    "fromValue": "IT",
+    "toValue": "HR",
+    "createdAt": "2026-09-06T18:37:20.803Z"
+  },
+  {
+    "id": "c5dd6dff-003f-4b10-b9c8-f755129528e6",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "claimed",
+    "actorId": "hr-agent-1",
+    "fromValue": null,
+    "toValue": "hr-agent-1",
+    "createdAt": "2026-09-06T18:39:30.351Z"
+  },
+  {
+    "id": "69455321-f7aa-41c5-85fa-b4f7982e37a3",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "unclaimed",
+    "actorId": "hr-agent-1",
+    "fromValue": "hr-agent-1",
+    "toValue": null,
+    "createdAt": "2026-09-06T18:39:54.112Z"
+  },
+  {
+    "id": "c34ac174-972e-4a36-9c44-78d69587ce3a",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "reassigned",
+    "actorId": "hr-agent-1",
+    "fromValue": "HR",
+    "toValue": "IT",
+    "createdAt": "2026-09-06T18:41:15.345Z"
+  },
+  {
+    "id": "a9947dff-4f95-4236-b594-0b47287e69a3",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "eventType": "claimed",
+    "actorId": "it-agent-1",
+    "fromValue": null,
+    "toValue": "it-agent-1",
+    "createdAt": "2026-09-06T18:42:38.945Z"
+  }
+]

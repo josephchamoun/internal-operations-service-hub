@@ -1,0 +1,9 @@
+[
+  { "id": "u1", "name": "Alice Employee", "email": "alice@company.com", "role": "employee", "teamIds": [] },
+  { "id": "u2", "name": "Ben Employee", "email": "ben@company.com", "role": "employee", "teamIds": [] },
+  { "id": "it-agent-1", "name": "Sam IT", "email": "sam@company.com", "role": "team_member", "teamIds": ["IT"] },
+  { "id": "it-agent-2", "name": "Riley IT", "email": "riley@company.com", "role": "team_member", "teamIds": ["IT"] },
+  { "id": "hr-agent-1", "name": "Maya HR", "email": "maya@company.com", "role": "team_member", "teamIds": ["HR"] },
+  { "id": "admin-1", "name": "Jordan Admin", "email": "jordan@company.com", "role": "admin", "teamIds": [] },
+  { "id": "main-agent-1", "name": "HR/IT agent", "email": "main@company.com", "role": "team_member", "teamIds": ["IT", "HR"] }
+]

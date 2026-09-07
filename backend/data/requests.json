@@ -1,0 +1,67 @@
+[
+  {
+    "id": "95afcf7b-eca7-4f80-a395-89a34d0a8482",
+    "requesterId": "u1",
+    "categoryId": "laptop-issue",
+    "owningTeamId": "IT",
+    "priorityId": "Normal",
+    "status": "Resolved",
+    "claimedBy": "it-agent-1",
+    "subject": "Laptop won't turn on",
+    "description": "Tried charging overnight, still no power.",
+    "createdAt": "2026-09-04T14:20:00.314Z",
+    "updatedAt": "2026-09-05T19:56:31.949Z"
+  },
+  {
+    "id": "02562336-3fb4-4e43-af90-e00768f4a76e",
+    "requesterId": "u1",
+    "categoryId": "laptop-issue",
+    "owningTeamId": "IT",
+    "priorityId": "Normal",
+    "status": "Cancelled",
+    "claimedBy": "it-agent-2",
+    "subject": "Laptop won't turn on",
+    "description": "Tried charging overnight, still no power.",
+    "createdAt": "2026-09-04T15:05:10.649Z",
+    "updatedAt": "2026-09-05T19:53:59.502Z"
+  },
+  {
+    "id": "9723da22-e232-4bb3-bd4f-b68aa3255d38",
+    "requesterId": "u1",
+    "categoryId": "laptop-issue",
+    "owningTeamId": "IT",
+    "priorityId": "Normal",
+    "status": "New",
+    "claimedBy": null,
+    "subject": "Laptop won't turn on",
+    "description": "Tried charging overnight, still no power.",
+    "createdAt": "2026-09-04T15:10:46.835Z",
+    "updatedAt": "2026-09-04T15:10:46.835Z"
+  },
+  {
+    "id": "6dca6fff-be09-4bb9-a1d5-d90e532ee56d",
+    "requesterId": "u1",
+    "categoryId": "laptop-issue",
+    "owningTeamId": "IT",
+    "priorityId": "Normal",
+    "status": "New",
+    "claimedBy": null,
+    "subject": "Laptop won't turn on",
+    "description": "Tried charging overnight, still no power.",
+    "createdAt": "2026-09-05T18:56:05.740Z",
+    "updatedAt": "2026-09-05T18:56:05.740Z"
+  },
+  {
+    "id": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "requesterId": "u2",
+    "categoryId": "laptop-issue",
+    "owningTeamId": "IT",
+    "priorityId": "Urgent",
+    "status": "New",
+    "claimedBy": "it-agent-1",
+    "subject": "Laptop won't turn on",
+    "description": "Tried charging overnight, still no power.",
+    "createdAt": "2026-09-06T18:34:03.365Z",
+    "updatedAt": "2026-09-06T18:42:38.944Z"
+  }
+]

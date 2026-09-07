@@ -1,0 +1,73 @@
+[
+  {
+    "id": "283ea3eb-9e9c-485e-b936-e254c4b0c563",
+    "userId": "hr-agent-1",
+    "requestId": "9723da22-e232-4bb3-bd4f-b68aa3255d38",
+    "accessedAt": "2026-09-06T17:37:27.677Z"
+  },
+  {
+    "id": "82a9d50b-8a9b-49de-884e-a11e262e75ac",
+    "userId": "hr-agent-1",
+    "requestId": "9723da22-e232-4bb3-bd4f-b68aa3255d38",
+    "accessedAt": "2026-09-06T17:57:03.796Z"
+  },
+  {
+    "id": "aeceec09-c80b-4662-9f81-c37afb310ac5",
+    "userId": "hr-agent-1",
+    "requestId": "9723da22-e232-4bb3-bd4f-b68aa3255d38",
+    "accessedAt": "2026-09-06T17:57:04.796Z"
+  },
+  {
+    "id": "5060bbac-d988-43ef-a1c1-8679fd6ee04a",
+    "userId": "u2",
+    "requestId": "9723da22-e232-4bb3-bd4f-b68aa3255d38",
+    "accessedAt": "2026-09-06T17:58:36.992Z"
+  },
+  {
+    "id": "c257d5ee-aa39-467f-ba34-4db428dede5a",
+    "userId": "u2",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "accessedAt": "2026-09-06T18:38:48.584Z",
+    "wasOutOfTeam": false
+  },
+  {
+    "id": "6559063c-fb5c-4b67-8300-34ff8724e488",
+    "userId": "hr-agent-1",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "accessedAt": "2026-09-06T18:39:11.304Z",
+    "wasOutOfTeam": false
+  },
+  {
+    "id": "0215ec34-7e9a-476f-a908-f640f71d13e6",
+    "userId": "hr-agent-1",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "accessedAt": "2026-09-06T18:40:13.342Z",
+    "wasOutOfTeam": false
+  },
+  {
+    "id": "3142d2f2-fc4e-4efe-9d78-6d5d0d77dd89",
+    "userId": "hr-agent-1",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "accessedAt": "2026-09-06T18:55:30.945Z",
+    "wasOutOfTeam": true
+  },
+  {
+    "id": "3f46b955-b799-448e-8ce7-2ccc11d9c1c7",
+    "userId": "hr-agent-1",
+    "requestId": "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+    "accessedAt": "2026-09-06T18:55:33.429Z",
+    "wasOutOfTeam": true
+  },
+  {
+    "id": "00f035eb-2c49-40b6-9be6-f9a689e30508",
+    "userId": "it-agent-1",
+    "requestId": "6dca6fff-be09-4bb9-a1d5-d90e532ee56d",
+    "accessedAt": "2026-09-07T12:34:52.316Z"
+  },
+  {
+    "id": "90a3fca9-4962-41ac-b544-7c83a4c19401",
+    "userId": "main-agent-1",
+    "requestId": "6dca6fff-be09-4bb9-a1d5-d90e532ee56d",
+    "accessedAt": "2026-09-07T12:35:00.253Z"
+  }
+]
