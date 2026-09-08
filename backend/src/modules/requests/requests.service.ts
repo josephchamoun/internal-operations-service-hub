@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -24,9 +23,8 @@ import { TeamsService } from '../teams/teams.service';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
 
-
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
-
+const OTHER_CATEGORY_ID = 'other';
 
 @Injectable()
 export class RequestsService {
@@ -44,53 +42,31 @@ export class RequestsService {
     return this.repo.findAll();
   }
 
-  async findOne(id: string, actorId: string): Promise<RequestSummary> {
+  findMine(actorId: string): Promise<RequestEntity[]> {
+    // Convenience filter, not a security boundary — GET /requests already
+    // shows everyone every request, this just narrows the view.
+    return this.repo.findAll().then((all) => all.filter((r) => r.requesterId === actorId));
+  }
+
+  async findOne(id: string): Promise<RequestSummary> {
     const request = await this.requireRequest(id);
-    const actor = await this.usersService.findOne(actorId);
-
-    const isRequester = actor.id === request.requesterId;
-    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
-    const isAdmin = actor.role === 'admin';
-
-    if (!isRequester && !isOwningTeamMember && !isAdmin) {
-      throw new ForbiddenException('You do not have access to this request');
-    }
-
     const { description, ...summary } = request;
     return summary;
   }
 
-  async findFullDetails(id: string, actorId: string): Promise<RequestEntity> {
+  async findFullDetails(id: string, actorId?: string): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
-    const actor = await this.usersService.findOne(actorId);
 
-    const isRequester = actor.id === request.requesterId;
-    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
-    const isAdmin = actor.role === 'admin';
-
-    if (!isRequester && !isOwningTeamMember && !isAdmin) {
-      throw new ForbiddenException('You do not have access to this request');
-    }
-
-    if (isOwningTeamMember && !isRequester) {
-      await this.accessLogsService.record(actor.id, request.id);
+    if (actorId) {
+      await this.usersService.findOne(actorId); // confirms the id is a real user
+      await this.accessLogsService.record(actorId, request.id);
     }
 
     return request;
   }
 
-  async findEvents(id: string, actorId: string): Promise<RequestEventEntity[]> {
-    const request = await this.requireRequest(id);
-    const actor = await this.usersService.findOne(actorId);
-
-    const isRequester = actor.id === request.requesterId;
-    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
-    const isAdmin = actor.role === 'admin';
-
-    if (!isRequester && !isOwningTeamMember && !isAdmin) {
-      throw new ForbiddenException("You do not have access to this request's events");
-    }
-
+  async findEvents(id: string): Promise<RequestEventEntity[]> {
+    await this.requireRequest(id);
     return this.requestEventsService.findByRequestId(id);
   }
 
@@ -98,10 +74,17 @@ export class RequestsService {
     await this.usersService.findOne(dto.requesterId);
     const category = await this.categoriesService.findOne(dto.categoryId);
 
-    if (!category.defaultTeamId) {
-      throw new BadRequestException(
-        `Category "${category.id}" has no default team; manual team selection isn't supported yet`,
-      );
+    let owningTeamId: string;
+    if (category.defaultTeamId) {
+      owningTeamId = category.defaultTeamId;
+    } else {
+      if (!dto.teamId) {
+        throw new BadRequestException(
+          `Category "${category.id}" has no default team; a teamId must be provided`,
+        );
+      }
+      await this.teamsService.findOne(dto.teamId); // confirms it's a real team
+      owningTeamId = dto.teamId;
     }
 
     const priorityId = dto.priorityId ?? 'Normal';
@@ -112,7 +95,7 @@ export class RequestsService {
       id: uuid(),
       requesterId: dto.requesterId,
       categoryId: dto.categoryId,
-      owningTeamId: category.defaultTeamId,
+      owningTeamId,
       priorityId,
       status: RequestStatus.NEW,
       claimedBy: null,
@@ -122,19 +105,17 @@ export class RequestsService {
       updatedAt: now,
     };
     return this.repo.create(entity);
-    // Later: notify every member of the owning team.
   }
 
   async claim(id: string, dto: ClaimRequestDto): Promise<RequestEntity> {
-    const request = await this.requireRequest(id); //get the request by id
-    this.assertNotTerminal(request, 'claimed'); //check if request is cancelled or resolved
+    const request = await this.requireRequest(id);
+    this.assertNotTerminal(request, 'claimed');
 
-    if (request.claimedBy) { //if claimed by another user, throw conflict exception
+    if (request.claimedBy) {
       throw new ConflictException(`Request ${id} is already claimed by ${request.claimedBy}`);
     }
 
-    const actor = await this.usersService.findOne(dto.actorId); //dto.actorId gets the actorid written in the request body, must be changed later when I apply real authentication
-    this.assertBelongsToTeam(actor, request.owningTeamId);//check if the actor belongs to the team that owns the request
+    const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
 
     const updated = (await this.repo.update(id, { claimedBy: actor.id })) as RequestEntity;
     await this.requestEventsService.append({
@@ -153,9 +134,6 @@ export class RequestsService {
 
     if (!request.claimedBy) {
       throw new BadRequestException(`Request ${id} is not claimed`);
-    }
-    if (request.claimedBy !== dto.actorId) {
-      throw new ForbiddenException('Only the current claimant can unclaim this request');
     }
 
     const previousClaimant = request.claimedBy;
@@ -177,12 +155,6 @@ export class RequestsService {
     if (!request.claimedBy) {
       throw new BadRequestException('Request must be claimed before its status can change');
     }
-    if (request.claimedBy !== dto.actorId) {
-      throw new ForbiddenException("Only the current claimant can change this request's status");
-    }
-    if (dto.status === RequestStatus.RESOLVED && dto.actorId === request.requesterId) {
-      throw new ForbiddenException('The requester cannot mark their own request as Resolved');
-    }
 
     const updated = (await this.repo.update(id, { status: dto.status })) as RequestEntity;
     await this.requestEventsService.append({
@@ -198,9 +170,6 @@ export class RequestsService {
   async cancel(id: string, dto: CancelRequestDto): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
 
-    if (request.requesterId !== dto.actorId) {
-      throw new ForbiddenException('Only the requester can cancel their own request');
-    }
     if (request.status !== RequestStatus.NEW && request.status !== RequestStatus.IN_PROGRESS) {
       throw new BadRequestException(
         `Cannot cancel a request that is already ${request.status}`,
@@ -225,18 +194,32 @@ export class RequestsService {
     this.assertNotTerminal(request, 'reassigned');
 
     const actor = await this.usersService.findOne(dto.actorId);
-    this.assertBelongsToTeam(actor, request.owningTeamId);
-
-    await this.teamsService.findOne(dto.newTeamId); // throws NotFoundException if the team doesn't exist
+    await this.teamsService.findOne(dto.newTeamId);
 
     if (dto.newTeamId === request.owningTeamId) {
       throw new BadRequestException('Request is already owned by this team');
     }
 
     const previousTeamId = request.owningTeamId;
+    const previousCategoryId = request.categoryId;
+
+    let newCategoryId: string;
+    if (dto.categoryId) {
+      const category = await this.categoriesService.findOne(dto.categoryId);
+      if (category.defaultTeamId && category.defaultTeamId !== dto.newTeamId) {
+        throw new BadRequestException(
+          `Category "${category.id}" does not belong to team "${dto.newTeamId}"`,
+        );
+      }
+      newCategoryId = category.id;
+    } else {
+      newCategoryId = OTHER_CATEGORY_ID;
+    }
+
     const updated = (await this.repo.update(id, {
       owningTeamId: dto.newTeamId,
       claimedBy: null,
+      categoryId: newCategoryId,
     })) as RequestEntity;
 
     await this.requestEventsService.append({
@@ -247,65 +230,33 @@ export class RequestsService {
       toValue: dto.newTeamId,
     });
 
+    if (newCategoryId !== previousCategoryId) {
+      await this.requestEventsService.append({
+        requestId: id,
+        eventType: RequestEventType.CATEGORY_CHANGED,
+        actorId: actor.id,
+        fromValue: previousCategoryId,
+        toValue: newCategoryId,
+      });
+    }
+
     return updated;
     // Later: notify every member of the new owning team.
-  }
-
-  private async requireRequest(id: string): Promise<RequestEntity> {
-    const found = await this.repo.findById(id);
-    if (!found) throw new NotFoundException(`Request ${id} not found`);
-    return found;
-  }
-
-
-  async findAccessLogsForRequest(id: string, actorId: string) {
-    const request = await this.requireRequest(id);
-    const admin = await this.usersService.findOne(actorId);
-    if (admin.role !== 'admin') {
-      throw new ForbiddenException('Only an admin can view this request\'s access logs');
-    }
-
-    const logs = await this.accessLogsService.findByRequestId(id);
-
-    return Promise.all(
-      logs.map(async (log) => {
-        const viewer = await this.usersService.findOne(log.userId);
-        const isLegit = viewer.id === request.requesterId || viewer.teamIds.includes(request.owningTeamId);
-        return { ...log, wasOutOfTeam: !isLegit };
-      }),
-    );
-  }
-
-  async findMine(actorId: string): Promise<RequestEntity[]> {
-    const actor = await this.usersService.findOne(actorId);
-    const all = await this.repo.findAll();
-    return all.filter((r) => r.requesterId === actor.id);
-  }
-
-  async findAllScoped(actorId: string): Promise<RequestEntity[]> {
-    const actor = await this.usersService.findOne(actorId);
-    if (actor.role === 'admin') {
-      return this.repo.findAll();
-    }
-    const all = await this.repo.findAll();
-    return all.filter((r) => actor.teamIds.includes(r.owningTeamId));
   }
 
   async updatePriority(id: string, dto: UpdatePriorityDto): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'updated');
 
-    const actor = await this.usersService.findOne(dto.actorId);
-    this.assertBelongsToTeam(actor, request.owningTeamId);
-
-    await this.prioritiesService.findOne(dto.priorityId); // validates it's a real priority
+    const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
+    await this.prioritiesService.findOne(dto.priorityId); // confirms it's a real priority
 
     const previousPriorityId = request.priorityId;
     const updated = (await this.repo.update(id, { priorityId: dto.priorityId })) as RequestEntity;
 
     await this.requestEventsService.append({
       requestId: id,
-      eventType: RequestEventType.PRIORITY_CHANGED, 
+      eventType: RequestEventType.PRIORITY_CHANGED,
       actorId: actor.id,
       fromValue: previousPriorityId,
       toValue: dto.priorityId,
@@ -314,17 +265,22 @@ export class RequestsService {
     return updated;
   }
 
+  async findAccessLogsForRequest(id: string) {
+    await this.requireRequest(id);
+    return this.accessLogsService.findByRequestId(id);
+  }
+
+  private async requireRequest(id: string): Promise<RequestEntity> {
+    const found = await this.repo.findById(id);
+    if (!found) throw new NotFoundException(`Request ${id} not found`);
+    return found;
+  }
+
   private assertNotTerminal(request: RequestEntity, action: string): void {
     if (TERMINAL_STATUSES.includes(request.status)) {
       throw new BadRequestException(
         `Request ${request.id} is ${request.status} and can no longer be ${action}`,
       );
-    }
-  }
-
-  private assertBelongsToTeam(user: { id: string; teamIds: string[] }, teamId: string): void {
-    if (!user.teamIds.includes(teamId)) {
-      throw new ForbiddenException(`User ${user.id} is not a member of team ${teamId}`);
     }
   }
 }

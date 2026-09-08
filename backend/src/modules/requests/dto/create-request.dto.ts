@@ -20,4 +20,8 @@ export class CreateRequestDto {
   @IsString()
   @IsNotEmpty()
   description!: string;
+
+  @IsString()
+  @IsOptional()
+  teamId?: string;
 }

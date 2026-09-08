@@ -17,21 +17,22 @@ export class RequestsController {
   }
 
   @Get()
-  findAll(@Query('actorId') actorId: string) {
-    return this.requestsService.findAllScoped(actorId);
+  findAll() {
+    return this.requestsService.findAll();
   }
 
   @Get(':id/events')
-  findEvents(@Param('id') id: string, @Query('actorId') actorId: string) {
-    return this.requestsService.findEvents(id, actorId);
+  findEvents(@Param('id') id: string) {
+    return this.requestsService.findEvents(id);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('actorId') actorId: string) {
-    return this.requestsService.findOne(id, actorId);
+  findOne(@Param('id') id: string) {
+    return this.requestsService.findOne(id);
   }
+
   @Get(':id/full')
-  findFullDetails(@Param('id') id: string, @Query('actorId') actorId: string) {
+  findFullDetails(@Param('id') id: string, @Query('actorId') actorId?: string) {
     return this.requestsService.findFullDetails(id, actorId);
   }
 
@@ -66,8 +67,8 @@ export class RequestsController {
   }
 
   @Get(':id/access-logs')
-  findAccessLogs(@Param('id') id: string, @Query('actorId') actorId: string) {
-    return this.requestsService.findAccessLogsForRequest(id, actorId);
+  findAccessLogs(@Param('id') id: string) {
+    return this.requestsService.findAccessLogsForRequest(id);
   }
 
   @Patch(':id/priority')

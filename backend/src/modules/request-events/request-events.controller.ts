@@ -6,7 +6,7 @@ export class RequestEventsController {
   constructor(private readonly requestEventsService: RequestEventsService) {}
 
   @Get()
-  findAll(@Query('actorId') actorId: string) {
-    return this.requestEventsService.findAll(actorId);
+  findAll() {
+    return this.requestEventsService.findAll();
   }
 }
