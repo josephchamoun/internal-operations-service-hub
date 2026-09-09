@@ -22,8 +22,6 @@ No escalation reminders or per user silencing. Both are described in the product
 
 No admin CRUD for reference data. Categories, priorities, and teams are read only, admin managed seed data (`categories.json`, `priorities.json`, `teams.json`). This feature only consumes that data via each module's service, it does not create, update, or delete it.
 
-If a category has no defaultTeamId (the "Other" category), the request body must include a teamId, and creation is rejected if it's missing. If the category does have a defaultTeamId, teamId is ignored and the derived team is used instead. Wrong routing can still be corrected later via reassignment.
-
 ## Architecture and conventions
 
 Framework: NestJS, modular structure, one module per resource (`requests`, `categories`, `priorities`, `users`, `teams`, `request-events`, `access-logs`).
@@ -142,7 +140,7 @@ When a service needs another module's service, add that module to the consuming 
 
 Literal path segments must be declared before dynamic ones in a controller, for example `@Get('mine')` has to come before `@Get(':id')`, or Nest will match `"mine"` as if it were an `:id` value and route it to the wrong handler.
 
-Do not add an actor identity check (comparing `actorId` against a requester, claimant, or team) anywhere in this feature unless explicitly asked. That work belongs to Week 3, once real authentication exists to base it on.
+Do not add an actor identity check (comparing `actorId` against a requester, claimant, or team) anywhere in this feature unless explicitly asked. 
 
 Preserve all invariants listed above. If a change would violate one, flag it rather than silently altering business logic.
 

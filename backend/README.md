@@ -9,7 +9,7 @@ git clone https://github.com/josephchamoun/internal-operations-service-hub.git
 cd internal-operations-service-hub
 ```
 
-Then open the folder in your code editor (VS Code, Cursor, WebStorm — any is fine).
+Then open the folder in your code editor (VS Code, Cursor, WebStorm).
 
 ### How do I install the dependencies?
 
@@ -122,14 +122,13 @@ All errors follow Nest's standard shape:
    ```
    
    Copy the returned `id`. `owningTeamId` is derived automatically from the category, not sent in this body.
+   To submit an "Other" category request instead, use categoryId: "other" and include a teamId in the body, since that category has no default team.
 
 2. `PATCH /requests/{id}/claim`
    
    ```json
    { "actorId": "it-agent-1" }
    ```
-   
-   To submit an "Other" category request instead, use categoryId: "other" and include a teamId in the body, since that category has no default team.
 
 3. `PATCH /requests/{id}/status`
    
