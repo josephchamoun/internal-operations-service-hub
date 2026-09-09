@@ -12,47 +12,47 @@ This document describes what the system stores, how the pieces relate to each ot
 
 | Field      | Type      | Notes         |
 | ---------- | --------- | ------------- |
+| id         | PK        |               |
 | name       | text      | Admin-defined |
 | created_at | timestamp |               |
 
 **TeamMembership:** links a user to a team they belong to. A user may have any number of these rows.
 
-| Field       | Type                      | Notes |
-| ----------- | ------------------------- | ----- |
-| user\_id    | FK to User (composite PK) |       |
-| team\_id    | FK to Team (composite PK) |       |
-| created\_at | timestamp                 |       |
+| Field      | Type                      | Notes |
+| ---------- | ------------------------- | ----- |
+| user_id    | FK to User (composite PK) |       |
+| team_id    | FK to Team (composite PK) |       |
+| created_at | timestamp                 |       |
 
 **Category:** an Admin-defined request category, each with one default owning team.
 
-| Field           | Type       | Notes         |
-| --------------- | ---------- | ------------- |
-| category_id     | PK         |               |
-| name            | text       | Admin-defined |
-| default_team_id | FK to Team,nullable |  null only for the "Other" category, which has no default team              |
-| created_at      | timestamp  |               |
+| Field           | Type                | Notes                                                         |
+| --------------- | ------------------- | ------------------------------------------------------------- |
+| category_id     | PK                  |                                                               |
+| name            | text                | Admin-defined                                                 |
+| default_team_id | FK to Team,nullable | null only for the "Other" category, which has no default team |
+| created_at      | timestamp           |                                                               |
 
 One Category row, named 'Other,' is a permanent fixture with default_team_id left null. Selecting it is what triggers the manual team picker in the submission flow, since the system can tell there's no default to fall back to.
 
 **Priority:** a fixed, Admin-defined urgency level, each with its own default escalation window.
 
-| Field             | Type     | Notes                                   |
-| ----------------- | -------- | --------------------------------------- |
-| priority_id       | PK       |                                         |
-| name              | text     | Low, Normal, or Urgent                  |
-| escalation_window | duration | default reminder cadence for this level |
+| Field                     | Type | Notes                                   |
+| ------------------------- | ---- | --------------------------------------- |
+| priority_id               | PK   |                                         |
+| name                      | text | Low, Normal, or Urgent                  |
+| escalation_window_minutes | int  | default reminder cadence for this level |
 
 **User:** a person known to the hub, layered on top of the identity the identity provider confirms.
 
-| Field          | Type                               | Notes                                                                                   |
-| -------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
-| user_id        | PK                                 |                                                                                         |
-| idp_subject_id | unique                             | stable reference to the identity provider's identity, used for login, never for contact |
-| email          | text                               | contact address for notifications, Admin-set                                            |
-| phone          | text, nullable                     | optional, Admin-set                                                                     |
+| Field          | Type                                                           | Notes                                                                                   |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| user_id        | PK                                                             |                                                                                         |
+| idp_subject_id | unique                                                         | stable reference to the identity provider's identity, used for login, never for contact |
+| name           | text                                                           | Admin-set                                                                               |
+| email          | text                                                           | contact address for notifications, Admin-set                                            |
 | role           | enum(employee, team_member, admin) | Admin-assigned, independent of the identity provider                                    |
-| team_id        | FK to Team, nullable               | set only when role equals team_member                                                   |
-| created_at     | timestamp                          |                                                                                         |
+| created_at     | timestamp                                                      |                                                                                         |
 
 **Request:** the central entity, representing one submitted request from creation to resolution.
 
@@ -96,15 +96,15 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 
 **RequestEvent:** an append-only entry in a request's timeline. It records status changes, claims, unclaims, reassignments, and escalation reminders sent.
 
-| Field      | Type                                                                     | Notes                                                       |
-| ---------- | ------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| event_id   | PK                                                                       |                                                             |
-| request_id | FK to Request                                                            |                                                             |
-| event_type | enum(status_change, claimed, unclaimed, reassigned, escalation_reminder) |                                                             |
-| actor_id   | FK to User, nullable                                                     | null for escalation_reminder, since no person triggers it   |
-| from_value | text, nullable                                                           | for example the old status, or the old team on reassignment |
-| to_value   | text, nullable                                                           | for example the new status, or the new team on reassignment |
-| created_at | timestamp                                                                |                                                             |
+| Field      | Type                                                                                                         | Notes                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| event_id   | PK                                                                                                           |                                                             |
+| request_id | FK to Request                                                                                                |                                                             |
+| event_type | enum(status_change, claimed, unclaimed, reassigned, escalation_reminder, category_changed, priority_changed) |                                                             |
+| actor_id   | FK to User, nullable                                                                                         | null for escalation_reminder, since no person triggers it   |
+| from_value | text, nullable                                                                                               | for example the old status, or the old team on reassignment |
+| to_value   | text, nullable                                                                                               | for example the new status, or the new team on reassignment |
+| created_at | timestamp                                                                                                    |                                                             |
 
 **Silence:** records that one user has muted escalation reminders for one request.
 
@@ -209,11 +209,12 @@ Checking whether a specific person has silenced a specific request is a quick lo
 
 Only indexes tied to one of the queries above are included; this system's volume doesn't call for indexing defensively.
 
-* **Request, on owning team**: supports the team queue lookup, the highest frequency query in the system.
-* **Request, on requester and status together**: supports the "my requests" lookup.
-* **RequestEvent, on request, event type, and time together**: supports reading a full timeline in order, and quickly finding the most recent event of a given type, which the escalation logic depends on.
-* **Message, on request and time together**: supports displaying a thread in order.
-* **TeamMembership, on team**: supports notifying every member of a team when a new request lands. No separate index was added on user, since the composite primary key on (user, team) already covers lookups by user alone.
+- **Request, on owning team and status together**: supports the team queue lookup, the highest frequency query in the system, which is usually narrowed by status as well as team.
+- **Request, on requester and status together**: supports the "my requests" lookup.
+- **Request, on status and claimed status together**: supports the escalation scheduler's recurring sweep for requests that are still New and unclaimed.
+- **RequestEvent, on request, event type, and time together**: supports reading a full timeline in order, and quickly finding the most recent event of a given type, which the escalation logic depends on.
+- **Message, on request and time together**: supports displaying a thread in order.
+- **TeamMembership, on team**: supports notifying every member of a team when a new request lands. No separate index was added on user, since the composite primary key on (user, team) already covers lookups by user alone.
 
 No index was added on category alone, since the Admin's cross-team search is infrequent enough that a full scan narrowed by the team and status indexes is sufficient. No full text index was added, since nothing in the requirements calls for free text search.
 
