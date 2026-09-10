@@ -1,27 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { FileStorageService } from '../../common/storage/file-storage.service';
+import { Category } from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { CategoryEntity } from './entities/category.entity';
 
-/*
-  Admin-managed reference data, seeded as mock JSON for now.
-  Read-only on purpose: this assignment only consumes categories from
-  `requests`, it doesn't manage them. When the "Admin manages categories"
-  assignment lands, add create()/update()/remove() here the same way
-  requests.repository.ts does, the service/controller below are
-  already shaped to make that a small change, not a rewrite.
- */
 @Injectable()
 export class CategoriesRepository {
-  private readonly fileName = 'categories.json';
-
-  constructor(private readonly storage: FileStorageService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<CategoryEntity[]> {
-    return this.storage.readAll<CategoryEntity>(this.fileName);
+    const rows = await this.prisma.category.findMany();
+    return rows.map(toEntity);
   }
 
   async findById(id: string): Promise<CategoryEntity | undefined> {
-    const all = await this.findAll();
-    return all.find((item) => item.id === id);
+    const row = await this.prisma.category.findUnique({ where: { categoryId: id } });
+    return row ? toEntity(row) : undefined;
   }
+}
+
+function toEntity(row: Category): CategoryEntity {
+  return {
+    id: row.categoryId,
+    name: row.name,
+    defaultTeamId: row.defaultTeamId,
+    createdAt: row.createdAt.toISOString(),
+  };
 }

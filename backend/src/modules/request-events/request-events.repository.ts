@@ -1,28 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import { FileStorageService } from '../../common/storage/file-storage.service';
+import { RequestEvent } from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestEventEntity } from './entities/request-event.entity';
+import { RequestEventType } from './enums/request-event-type.enum';
 
 @Injectable()
 export class RequestEventsRepository {
-  private readonly fileName = 'request-events.json';
-
-  constructor(private readonly storage: FileStorageService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<RequestEventEntity[]> {
-    return this.storage.readAll<RequestEventEntity>(this.fileName);
+    const rows = await this.prisma.requestEvent.findMany();
+    return rows.map(toEntity);
   }
 
   async findByRequestId(requestId: string): Promise<RequestEventEntity[]> {
-    const all = await this.findAll();
-    return all
-      .filter((event) => event.requestId === requestId)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const rows = await this.prisma.requestEvent.findMany({
+      where: { requestId },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map(toEntity);
   }
 
   async create(entity: RequestEventEntity): Promise<RequestEventEntity> {
-    const all = await this.findAll();
-    all.push(entity);
-    await this.storage.writeAll(this.fileName, all);
-    return entity;
+    const row = await this.prisma.requestEvent.create({
+      data: {
+        eventId: entity.id,
+        requestId: entity.requestId,
+        eventType: entity.eventType,
+        actorId: entity.actorId,
+        fromValue: entity.fromValue,
+        toValue: entity.toValue,
+        createdAt: new Date(entity.createdAt),
+      },
+    });
+    return toEntity(row);
   }
+}
+
+function toEntity(row: RequestEvent): RequestEventEntity {
+  return {
+    id: row.eventId,
+    requestId: row.requestId,
+    eventType: row.eventType as RequestEventType,
+    actorId: row.actorId,
+    fromValue: row.fromValue,
+    toValue: row.toValue,
+    createdAt: row.createdAt.toISOString(),
+  };
 }

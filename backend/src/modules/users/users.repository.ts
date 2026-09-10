@@ -1,27 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { FileStorageService } from '../../common/storage/file-storage.service';
+import { User } from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { UserEntity } from './entities/user.entity';
 
-/*
-  Admin-managed reference data, seeded as mock JSON for now.
-  Read-only on purpose: this assignment only consumes users from
-  `requests`, it doesn't manage them. When the "Admin manages users"
-  assignment lands, add create()/update()/remove() here the same way
-  requests.repository.ts does, the service/controller below are
-  already shaped to make that a small change, not a rewrite.
- */
 @Injectable()
 export class UsersRepository {
-  private readonly fileName = 'users.json';
-
-  constructor(private readonly storage: FileStorageService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<UserEntity[]> {
-    return this.storage.readAll<UserEntity>(this.fileName);
+    const rows = await this.prisma.user.findMany();
+    return rows.map(toEntity);
   }
 
   async findById(id: string): Promise<UserEntity | undefined> {
-    const all = await this.findAll();
-    return all.find((item) => item.id === id);
+    const row = await this.prisma.user.findUnique({ where: { userId: id } });
+    return row ? toEntity(row) : undefined;
   }
+}
+
+function toEntity(row: User): UserEntity {
+  return {
+    id: row.userId,
+    idpSubjectId: row.idpSubjectId,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
