@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  employee
+  team_member
+  admin
+}
+
+enum RequestStatus {
+  New
+  InProgress @map("In Progress")
+  Resolved
+  Cancelled
+}
+
+enum RequestEventType {
+  status_change
+  claimed
+  unclaimed
+  reassigned
+  escalation_reminder
+  category_changed
+  priority_changed
+}
+
+model Team {
+  id        String   @id
+  name      String
+  createdAt DateTime @map("created_at")
+
+  memberships TeamMembership[]
+  categories  Category[]
+  requests    Request[]
+}
+
+model TeamMembership {
+  userId    String   @map("user_id")
+  teamId    String   @map("team_id")
+  createdAt DateTime @map("created_at")
+
+  user User @relation(fields: [userId], references: [userId])
+  team Team @relation(fields: [teamId], references: [id])
+
+  @@id([userId, teamId])
+  @@index([teamId])
+}
+
+model Category {
+  categoryId    String   @id @map("category_id")
+  name          String
+  defaultTeamId String?  @map("default_team_id")
+  createdAt     DateTime @map("created_at")
+
+  defaultTeam Team?     @relation(fields: [defaultTeamId], references: [id])
+  requests    Request[]
+}
+
+model Priority {
+  priorityId               String @id @map("priority_id")
+  name                     String
+  escalationWindowMinutes  Int    @map("escalation_window_minutes")
+
+  requests Request[]
+}
+
+model User {
+  userId        String   @id @map("user_id")
+  idpSubjectId  String   @unique @map("idp_subject_id")
+  name          String
+  email         String
+  role          UserRole
+  createdAt     DateTime @map("created_at")
+
+  memberships      TeamMembership[]
+  requestedRequests Request[]        @relation("RequestRequester")
+  claimedRequests   Request[]        @relation("RequestClaimedBy")
+  messages          Message[]
+  attachments       Attachment[]
+  events            RequestEvent[]
+  silences          Silence[]
+  accessLogs        AccessLog[]
+}
+
+model Request {
+  requestId    String        @id @map("request_id")
+  requesterId  String        @map("requester_id")
+  categoryId   String        @map("category_id")
+  owningTeamId String        @map("owning_team_id")
+  priorityId   String        @map("priority_id")
+  status       RequestStatus
+  claimedBy    String?       @map("claimed_by")
+  subject      String
+  description  String
+  createdAt    DateTime      @map("created_at")
+  updatedAt    DateTime      @map("updated_at")
+
+  requester  User      @relation("RequestRequester", fields: [requesterId], references: [userId])
+  category   Category  @relation(fields: [categoryId], references: [categoryId])
+  owningTeam Team      @relation(fields: [owningTeamId], references: [id])
+  priority   Priority  @relation(fields: [priorityId], references: [priorityId])
+  claimant   User?     @relation("RequestClaimedBy", fields: [claimedBy], references: [userId])
+  messages     Message[]
+  attachments  Attachment[]
+  events       RequestEvent[]
+  silences     Silence[]
+  accessLogs   AccessLog[]
+
+  @@index([owningTeamId, status])
+  @@index([requesterId, status])
+  @@index([status, claimedBy])
+}
+
+model Message {
+  messageId String   @id @map("message_id")
+  requestId String   @map("request_id")
+  senderId  String   @map("sender_id")
+  body      String
+  createdAt DateTime @map("created_at")
+
+  request      Request      @relation(fields: [requestId], references: [requestId])
+  sender       User         @relation(fields: [senderId], references: [userId])
+  attachments  Attachment[]
+
+  @@index([requestId, createdAt])
+}
+
+model Attachment {
+  attachmentId String   @id @map("attachment_id")
+  requestId    String   @map("request_id")
+  messageId    String?  @map("message_id")
+  uploaderId   String   @map("uploader_id")
+  fileRef      Bytes    @map("file_ref")
+  fileName     String   @map("file_name")
+  contentType  String   @map("content_type")
+  sizeBytes    Int      @map("size_bytes")
+  createdAt    DateTime @map("created_at")
+
+  request  Request  @relation(fields: [requestId], references: [requestId])
+  message  Message? @relation(fields: [messageId], references: [messageId])
+  uploader User     @relation(fields: [uploaderId], references: [userId])
+}
+
+model RequestEvent {
+  eventId    String           @id @map("event_id")
+  requestId  String           @map("request_id")
+  eventType  RequestEventType @map("event_type")
+  actorId    String?          @map("actor_id")
+  fromValue  String?          @map("from_value")
+  toValue    String?          @map("to_value")
+  createdAt  DateTime         @map("created_at")
+
+  request Request @relation(fields: [requestId], references: [requestId])
+  actor   User?   @relation(fields: [actorId], references: [userId])
+
+  @@index([requestId, eventType, createdAt])
+}
+
+model Silence {
+  userId     String   @map("user_id")
+  requestId  String   @map("request_id")
+  silencedAt DateTime @map("silenced_at")
+
+  user    User    @relation(fields: [userId], references: [userId])
+  request Request @relation(fields: [requestId], references: [requestId])
+
+  @@id([userId, requestId])
+}
+
+model AccessLog {
+  accessId   String   @id @map("access_id")
+  userId     String   @map("user_id")
+  requestId  String   @map("request_id")
+  accessedAt DateTime @map("accessed_at")
+
+  user    User    @relation(fields: [userId], references: [userId])
+  request Request @relation(fields: [requestId], references: [requestId])
+}
