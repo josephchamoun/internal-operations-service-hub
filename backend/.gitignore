@@ -9,6 +9,10 @@ dist/
 .env.*
 !.env.example
 
+# SQLite database files
+*.db
+*.db-journal
+
 # Logs
 *.log
 logs/
@@ -27,3 +31,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# database
+prisma/dev.db
