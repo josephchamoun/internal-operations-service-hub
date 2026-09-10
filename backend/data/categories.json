@@ -1,8 +1,0 @@
-[
-  { "id": "laptop-issue", "name": "Laptop Issue", "defaultTeamId": "IT" },
-  { "id": "software-issue", "name": "Software Issue", "defaultTeamId": "IT" },
-  { "id": "account-access", "name": "Account / Access Request", "defaultTeamId": "IT" },
-  { "id": "hr-approval", "name": "HR Approval", "defaultTeamId": "HR" },
-  { "id": "policy-question", "name": "Policy Question", "defaultTeamId": "HR" },
-  { "id": "other", "name": "Other", "defaultTeamId": null }
-]

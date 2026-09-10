@@ -1,5 +1,0 @@
-[
-  { "id": "Low", "name": "Low", "escalationWindowMinutes": 2880 },
-  { "id": "Normal", "name": "Normal", "escalationWindowMinutes": 1440 },
-  { "id": "Urgent", "name": "Urgent", "escalationWindowMinutes": 120 }
-]
