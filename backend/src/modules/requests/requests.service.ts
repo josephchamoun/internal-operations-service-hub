@@ -128,66 +128,72 @@ export class RequestsService {
     return updated;
   }
 
-  async unclaim(id: string, dto: ClaimRequestDto): Promise<RequestEntity> {
-    const request = await this.requireRequest(id);
-    this.assertNotTerminal(request, 'unclaimed');
+async unclaim(id: string, dto: ClaimRequestDto): Promise<RequestEntity> {
+  const request = await this.requireRequest(id);
+  this.assertNotTerminal(request, 'unclaimed');
 
-    if (!request.claimedBy) {
-      throw new BadRequestException(`Request ${id} is not claimed`);
-    }
-
-    const previousClaimant = request.claimedBy;
-    const updated = (await this.repo.update(id, { claimedBy: null })) as RequestEntity;
-    await this.requestEventsService.append({
-      requestId: id,
-      eventType: RequestEventType.UNCLAIMED,
-      actorId: dto.actorId,
-      fromValue: previousClaimant,
-      toValue: null,
-    });
-    return updated;
+  if (!request.claimedBy) {
+    throw new BadRequestException(`Request ${id} is not claimed`);
   }
 
-  async updateStatus(id: string, dto: UpdateStatusDto): Promise<RequestEntity> {
-    const request = await this.requireRequest(id);
-    this.assertNotTerminal(request, 'updated');
+  const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
 
-    if (!request.claimedBy) {
-      throw new BadRequestException('Request must be claimed before its status can change');
-    }
+  const previousClaimant = request.claimedBy;
+  const updated = (await this.repo.update(id, { claimedBy: null })) as RequestEntity;
+  await this.requestEventsService.append({
+    requestId: id,
+    eventType: RequestEventType.UNCLAIMED,
+    actorId: actor.id,
+    fromValue: previousClaimant,
+    toValue: null,
+  });
+  return updated;
+}
 
-    const updated = (await this.repo.update(id, { status: dto.status })) as RequestEntity;
-    await this.requestEventsService.append({
-      requestId: id,
-      eventType: RequestEventType.STATUS_CHANGE,
-      actorId: dto.actorId,
-      fromValue: request.status,
-      toValue: dto.status,
-    });
-    return updated;
+async updateStatus(id: string, dto: UpdateStatusDto): Promise<RequestEntity> {
+  const request = await this.requireRequest(id);
+  this.assertNotTerminal(request, 'updated');
+
+  if (!request.claimedBy) {
+    throw new BadRequestException('Request must be claimed before its status can change');
   }
 
-  async cancel(id: string, dto: CancelRequestDto): Promise<RequestEntity> {
-    const request = await this.requireRequest(id);
+  const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
 
-    if (request.status !== RequestStatus.NEW && request.status !== RequestStatus.IN_PROGRESS) {
-      throw new BadRequestException(
-        `Cannot cancel a request that is already ${request.status}`,
-      );
-    }
+  const updated = (await this.repo.update(id, { status: dto.status })) as RequestEntity;
+  await this.requestEventsService.append({
+    requestId: id,
+    eventType: RequestEventType.STATUS_CHANGE,
+    actorId: actor.id,
+    fromValue: request.status,
+    toValue: dto.status,
+  });
+  return updated;
+}
 
-    const updated = (await this.repo.update(id, {
-      status: RequestStatus.CANCELLED,
-    })) as RequestEntity;
-    await this.requestEventsService.append({
-      requestId: id,
-      eventType: RequestEventType.STATUS_CHANGE,
-      actorId: dto.actorId,
-      fromValue: request.status,
-      toValue: RequestStatus.CANCELLED,
-    });
-    return updated;
+async cancel(id: string, dto: CancelRequestDto): Promise<RequestEntity> {
+  const request = await this.requireRequest(id);
+
+  if (request.status !== RequestStatus.NEW && request.status !== RequestStatus.IN_PROGRESS) {
+    throw new BadRequestException(
+      `Cannot cancel a request that is already ${request.status}`,
+    );
   }
+
+  const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
+
+  const updated = (await this.repo.update(id, {
+    status: RequestStatus.CANCELLED,
+  })) as RequestEntity;
+  await this.requestEventsService.append({
+    requestId: id,
+    eventType: RequestEventType.STATUS_CHANGE,
+    actorId: actor.id,
+    fromValue: request.status,
+    toValue: RequestStatus.CANCELLED,
+  });
+  return updated;
+}
 
   async reassign(id: string, dto: ReassignRequestDto): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
