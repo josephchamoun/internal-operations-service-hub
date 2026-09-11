@@ -16,6 +16,24 @@ export class UsersRepository {
     const row = await this.prisma.user.findUnique({ where: { userId: id } });
     return row ? toEntity(row) : undefined;
   }
+
+  async findByIdpSubjectId(idpSubjectId: string): Promise<UserEntity | undefined> {
+    const row = await this.prisma.user.findUnique({ where: { idpSubjectId } });
+    return row ? toEntity(row) : undefined;
+  }
+
+  async findByEmail(email: string): Promise<UserEntity | undefined> {
+    const row = await this.prisma.user.findFirst({ where: { email } });
+    return row ? toEntity(row) : undefined;
+  }
+
+  async linkIdpSubjectId(id: string, idpSubjectId: string): Promise<UserEntity> {
+    const row = await this.prisma.user.update({
+      where: { userId: id },
+      data: { idpSubjectId },
+    });
+    return toEntity(row);
+  }
 }
 
 function toEntity(row: User): UserEntity {

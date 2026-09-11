@@ -15,4 +15,16 @@ export class UsersService {
     if (!found) throw new NotFoundException(`User ${id} not found`);
     return found;
   }
+
+  findByIdpSubjectId(idpSubjectId: string): Promise<UserEntity | undefined> {
+    return this.repo.findByIdpSubjectId(idpSubjectId);
+  }
+
+  findByEmail(email: string): Promise<UserEntity | undefined> {
+    return this.repo.findByEmail(email);
+  }
+
+  linkIdpSubjectId(id: string, idpSubjectId: string): Promise<UserEntity> {
+    return this.repo.linkIdpSubjectId(id, idpSubjectId);
+  }
 }

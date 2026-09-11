@@ -86,14 +86,14 @@ async function main() {
     await prisma.user.upsert({
       where: { userId: user.id },
       update: {
-        idpSubjectId: user.id,
+        idpSubjectId: null,
         name: user.name,
         email: user.email,
         role: user.role,
       },
       create: {
         userId: user.id,
-        idpSubjectId: user.id,
+        idpSubjectId: null,
         name: user.name,
         email: user.email,
         role: user.role,
