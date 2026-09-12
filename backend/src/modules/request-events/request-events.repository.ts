@@ -13,6 +13,13 @@ export class RequestEventsRepository {
     return rows.map(toEntity);
   }
 
+  async findAllForTeams(teamIds: string[]): Promise<RequestEventEntity[]> {
+    const rows = await this.prisma.requestEvent.findMany({
+      where: { request: { owningTeamId: { in: teamIds } } },
+    });
+    return rows.map(toEntity);
+  }
+
   async findByRequestId(requestId: string): Promise<RequestEventEntity[]> {
     const rows = await this.prisma.requestEvent.findMany({
       where: { requestId },

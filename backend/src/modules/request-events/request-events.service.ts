@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { RequestEventsRepository } from './request-events.repository';
 import { RequestEventEntity } from './entities/request-event.entity';
 import { RequestEventType } from './enums/request-event-type.enum';
+import { HubJwtPayload } from '../auth/auth.service';
 
 @Injectable()
 export class RequestEventsService {
@@ -12,8 +13,11 @@ export class RequestEventsService {
     return this.repo.findByRequestId(requestId);
   }
 
-  findAll(): Promise<RequestEventEntity[]> {
-    return this.repo.findAll();
+  findAll(actor: HubJwtPayload): Promise<RequestEventEntity[]> {
+    if (actor.role === 'admin') {
+      return this.repo.findAll();
+    }
+    return this.repo.findAllForTeams(actor.teamIds);
   }
 
   append(params: {
