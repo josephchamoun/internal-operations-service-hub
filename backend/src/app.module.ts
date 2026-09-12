@@ -10,6 +10,7 @@ import { TeamMembershipsModule } from './modules/team-memberships/team-membershi
 import { RequestEventsModule } from './modules/request-events/request-events.module';
 import { AccessLogsModule } from './modules/access-logs/access-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthModule } from './modules/auth/auth.module';
     RequestEventsModule,
     AccessLogsModule,
     AuthModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

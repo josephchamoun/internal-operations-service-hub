@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { RequestEventsModule } from '../request-events/request-events.module';
 import { AccessLogsModule } from '../access-logs/access-logs.module';
 import { TeamsModule } from '../teams/teams.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TeamsModule } from '../teams/teams.module';
     TeamsModule,
     RequestEventsModule,
     AccessLogsModule,
+    NotificationsModule,
   ],
   controllers: [RequestsController],
   providers: [RequestsService, RequestsRepository],

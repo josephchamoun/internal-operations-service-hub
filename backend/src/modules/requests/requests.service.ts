@@ -13,7 +13,6 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { PrioritiesService } from '../priorities/priorities.service';
 import { CategoriesService } from '../categories/categories.service';
-import { UsersService } from '../users/users.service';
 import { RequestEventsService } from '../request-events/request-events.service';
 import { RequestEventType } from '../request-events/enums/request-event-type.enum';
 import { AccessLogsService } from '../access-logs/access-logs.service';
@@ -22,6 +21,7 @@ import { TeamsService } from '../teams/teams.service';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
 import { HubJwtPayload } from '../auth/auth.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
 const OTHER_CATEGORY_ID = 'other';
@@ -40,10 +40,10 @@ export class RequestsService {
     private readonly repo: RequestsRepository,
     private readonly prioritiesService: PrioritiesService,
     private readonly categoriesService: CategoriesService,
-    private readonly usersService: UsersService,
     private readonly teamsService: TeamsService,
     private readonly requestEventsService: RequestEventsService,
     private readonly accessLogsService: AccessLogsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   findAll(actor: HubJwtPayload): Promise<RequestEntity[]> {
@@ -57,7 +57,6 @@ export class RequestsService {
         .then((all) => all.filter((r) => actor.teamIds.includes(r.owningTeamId)));
     }
 
-    // Plain employee with no team membership: no queue, just their own requests.
     return this.repo
       .findAll()
       .then((all) => all.filter((r) => r.requesterId === actor.userId));
@@ -73,12 +72,6 @@ export class RequestsService {
     return summary;
   }
 
-  /**
-   * Per data-model.md §2.6/§2.7: the requester or a member of the owning team
-   * get the full record. Anyone else gets a limited view (category, requester,
-   * createdAt, subject only), and the access is logged since it's outside
-   * their normal ownership.
-   */
   async findFullDetails(
     id: string,
     actor: HubJwtPayload,
@@ -150,7 +143,15 @@ export class RequestsService {
       createdAt: now,
       updatedAt: now,
     };
-    return this.repo.create(entity);
+
+    const created = await this.repo.create(entity);
+    void this.notificationsService.notifyTeam(
+      created.owningTeamId,
+      `New request: ${created.subject}`,
+      `A new request has landed in your team's queue.\n\nSubject: ${created.subject}\nCategory: ${created.categoryId}`,
+    );
+
+    return created;
   }
 
   async claim(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
@@ -173,6 +174,8 @@ export class RequestsService {
       fromValue: null,
       toValue: actor.userId,
     });
+    // Per product-spec.md: claiming itself does not trigger a notification,
+    // since the team's queue already reflects the change live.
     return updated;
   }
 
@@ -197,6 +200,13 @@ export class RequestsService {
       fromValue: previousClaimant,
       toValue: null,
     });
+
+    void this.notificationsService.notifyTeam(
+      updated.owningTeamId,
+      `Request unclaimed: ${updated.subject}`,
+      `A request has been unclaimed and is back in your team's queue.\n\nSubject: ${updated.subject}`,
+    );
+
     return updated;
   }
 
@@ -224,6 +234,13 @@ export class RequestsService {
       fromValue: request.status,
       toValue: dto.status,
     });
+
+    void this.notificationsService.notifyUser(
+      updated.requesterId,
+      `Your request status changed: ${updated.subject}`,
+      `Your request is now: ${updated.status}\n\nSubject: ${updated.subject}`,
+    );
+
     return updated;
   }
 
@@ -312,6 +329,12 @@ export class RequestsService {
         toValue: newCategoryId,
       });
     }
+
+    void this.notificationsService.notifyTeam(
+      updated.owningTeamId,
+      `New request: ${updated.subject}`,
+      `A request has been reassigned to your team's queue.\n\nSubject: ${updated.subject}`,
+    );
 
     return updated;
   }
