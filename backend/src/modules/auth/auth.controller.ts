@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Res, ForbiddenException } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 
@@ -15,5 +15,13 @@ export class AuthController {
   @Get('callback')
   async callback(@Query('code') code: string) {
     return this.authService.handleCallback(code);
+  }
+
+  @Post('dev-login')
+  async devLogin(@Body('userId') userId: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Dev login is disabled in production');
+    }
+    return this.authService.devLogin(userId);
   }
 }

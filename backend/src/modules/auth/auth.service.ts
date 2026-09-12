@@ -106,5 +106,21 @@ export class AuthService {
     throw new ForbiddenException(
         'No account provisioned for this identity — contact an administrator',
     );
-    }
+  }
+
+
+  // This is a development-only endpoint that allows you to log in as any seeded user without going through Microsoft authentication.
+  async devLogin(userId: string): Promise<{ accessToken: string }> {
+    const user = await this.usersService.findOne(userId); // throws NotFoundException if not seeded
+    const memberships = await this.teamMembershipsService.findByUserId(user.id);
+    const teamIds = memberships.map((m) => m.teamId);
+
+    const payload: HubJwtPayload = {
+      userId: user.id,
+      role: user.role,
+      teamIds,
+    };
+
+    return { accessToken: this.jwtService.sign(payload) };
+  }
 }

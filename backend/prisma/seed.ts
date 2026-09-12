@@ -41,6 +41,9 @@ const users: UserRow[] = [
   { id: 'hr-agent-1', name: 'Maya HR', email: 'maya@company.com', role: 'team_member', teamIds: ['HR'] },
   { id: 'admin-1', name: 'Jordan Admin', email: 'jordan@company.com', role: 'admin', teamIds: [] },
   { id: 'main-agent-1', name: 'HR/IT agent', email: 'main@company.com', role: 'team_member', teamIds: ['IT', 'HR'] },
+    // Dev/test-only accounts — used only by the dev-login endpoint, never via real Entra ID
+  { id: 'dev-manager', name: 'IT Member (test)', email: 'dev-manager@test.local', role: 'team_member', teamIds: ['IT'] },
+  { id: 'dev-employee', name: 'Employee 1 (test)', email: 'dev-employee@test.local', role: 'employee', teamIds: [] },
 ];
 
 async function main() {
