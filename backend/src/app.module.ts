@@ -11,6 +11,7 @@ import { RequestEventsModule } from './modules/request-events/request-events.mod
 import { AccessLogsModule } from './modules/access-logs/access-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { LiveUpdatesModule as liveUpdatesModule } from './modules/live-updates/live-updates.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     AccessLogsModule,
     AuthModule,
     NotificationsModule,
+    liveUpdatesModule,
   ],
 })
 export class AppModule {}

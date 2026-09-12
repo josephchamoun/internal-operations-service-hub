@@ -9,6 +9,7 @@ import { RequestEventsModule } from '../request-events/request-events.module';
 import { AccessLogsModule } from '../access-logs/access-logs.module';
 import { TeamsModule } from '../teams/teams.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { LiveUpdatesModule as liveUpdatesModule } from '../live-updates/live-updates.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     RequestEventsModule,
     AccessLogsModule,
     NotificationsModule,
+    liveUpdatesModule,
   ],
   controllers: [RequestsController],
   providers: [RequestsService, RequestsRepository],

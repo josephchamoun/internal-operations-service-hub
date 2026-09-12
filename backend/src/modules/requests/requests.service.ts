@@ -22,6 +22,7 @@ import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
 import { HubJwtPayload } from '../auth/auth.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { LiveUpdatesService } from '../live-updates/live-updates.service';
 
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
 const OTHER_CATEGORY_ID = 'other';
@@ -44,6 +45,7 @@ export class RequestsService {
     private readonly requestEventsService: RequestEventsService,
     private readonly accessLogsService: AccessLogsService,
     private readonly notificationsService: NotificationsService,
+    private readonly liveUpdatesService: LiveUpdatesService,
   ) {}
 
   findAll(actor: HubJwtPayload): Promise<RequestEntity[]> {
@@ -174,8 +176,11 @@ export class RequestsService {
       fromValue: null,
       toValue: actor.userId,
     });
-    // Per product-spec.md: claiming itself does not trigger a notification,
-    // since the team's queue already reflects the change live.
+
+    this.liveUpdatesService.emit(id, 'claimed', { claimedBy: actor.userId });
+    // Per product-spec.md: claiming itself does not trigger an external
+    // notification, since the live push above already reflects it for
+    // anyone currently watching the request.
     return updated;
   }
 
@@ -200,6 +205,8 @@ export class RequestsService {
       fromValue: previousClaimant,
       toValue: null,
     });
+
+    this.liveUpdatesService.emit(id, 'unclaimed', { previousClaimant });
 
     void this.notificationsService.notifyTeam(
       updated.owningTeamId,
@@ -234,6 +241,8 @@ export class RequestsService {
       fromValue: request.status,
       toValue: dto.status,
     });
+
+    this.liveUpdatesService.emit(id, 'status_changed', { status: dto.status });
 
     void this.notificationsService.notifyUser(
       updated.requesterId,
