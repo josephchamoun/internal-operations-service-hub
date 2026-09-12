@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,9 +10,7 @@ import { RequestsRepository } from './requests.repository';
 import { RequestEntity, RequestSummary } from './entities/request.entity';
 import { RequestStatus } from './enums/request-status.enum';
 import { CreateRequestDto } from './dto/create-request.dto';
-import { ClaimRequestDto } from './dto/claim-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
-import { CancelRequestDto } from './dto/cancel-request.dto';
 import { PrioritiesService } from '../priorities/priorities.service';
 import { CategoriesService } from '../categories/categories.service';
 import { UsersService } from '../users/users.service';
@@ -22,9 +21,18 @@ import { RequestEventEntity } from '../request-events/entities/request-event.ent
 import { TeamsService } from '../teams/teams.service';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
+import { HubJwtPayload } from '../auth/auth.service';
 
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
 const OTHER_CATEGORY_ID = 'other';
+
+export interface LimitedRequestView {
+  id: string;
+  categoryId: string;
+  requesterId: string;
+  createdAt: string;
+  subject: string;
+}
 
 @Injectable()
 export class RequestsService {
@@ -38,14 +46,25 @@ export class RequestsService {
     private readonly accessLogsService: AccessLogsService,
   ) {}
 
-  findAll(): Promise<RequestEntity[]> {
-    return this.repo.findAll();
+  findAll(actor: HubJwtPayload): Promise<RequestEntity[]> {
+    if (actor.role === 'admin') {
+      return this.repo.findAll();
+    }
+
+    if (actor.teamIds.length > 0) {
+      return this.repo
+        .findAll()
+        .then((all) => all.filter((r) => actor.teamIds.includes(r.owningTeamId)));
+    }
+
+    // Plain employee with no team membership: no queue, just their own requests.
+    return this.repo
+      .findAll()
+      .then((all) => all.filter((r) => r.requesterId === actor.userId));
   }
 
-  findMine(actorId: string): Promise<RequestEntity[]> {
-    // Convenience filter, not a security boundary — GET /requests already
-    // shows everyone every request, this just narrows the view.
-    return this.repo.findAll().then((all) => all.filter((r) => r.requesterId === actorId));
+  findMine(actor: HubJwtPayload): Promise<RequestEntity[]> {
+    return this.repo.findAll().then((all) => all.filter((r) => r.requesterId === actor.userId));
   }
 
   async findOne(id: string): Promise<RequestSummary> {
@@ -54,24 +73,51 @@ export class RequestsService {
     return summary;
   }
 
-  async findFullDetails(id: string, actorId?: string): Promise<RequestEntity> {
+  /**
+   * Per data-model.md §2.6/§2.7: the requester or a member of the owning team
+   * get the full record. Anyone else gets a limited view (category, requester,
+   * createdAt, subject only), and the access is logged since it's outside
+   * their normal ownership.
+   */
+  async findFullDetails(
+    id: string,
+    actor: HubJwtPayload,
+  ): Promise<RequestEntity | LimitedRequestView> {
     const request = await this.requireRequest(id);
 
-    if (actorId) {
-      await this.usersService.findOne(actorId); // confirms the id is a real user
-      await this.accessLogsService.record(actorId, request.id);
+    const isRequester = request.requesterId === actor.userId;
+    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
+
+    if (isRequester || isOwningTeamMember) {
+      return request;
     }
 
-    return request;
+    await this.accessLogsService.record(actor.userId, request.id);
+
+    return {
+      id: request.id,
+      categoryId: request.categoryId,
+      requesterId: request.requesterId,
+      createdAt: request.createdAt,
+      subject: request.subject,
+    };
   }
 
-  async findEvents(id: string): Promise<RequestEventEntity[]> {
-    await this.requireRequest(id);
+  async findEvents(id: string, actor: HubJwtPayload): Promise<RequestEventEntity[]> {
+    const request = await this.requireRequest(id);
+
+    const isRequester = request.requesterId === actor.userId;
+    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
+    const isAdmin = actor.role === 'admin';
+
+    if (!isRequester && !isOwningTeamMember && !isAdmin) {
+      throw new ForbiddenException('You do not have access to this request\'s events');
+    }
+
     return this.requestEventsService.findByRequestId(id);
   }
 
-  async create(dto: CreateRequestDto): Promise<RequestEntity> {
-    await this.usersService.findOne(dto.requesterId);
+  async create(dto: CreateRequestDto, actor: HubJwtPayload): Promise<RequestEntity> {
     const category = await this.categoriesService.findOne(dto.categoryId);
 
     let owningTeamId: string;
@@ -83,7 +129,7 @@ export class RequestsService {
           `Category "${category.id}" has no default team; a teamId must be provided`,
         );
       }
-      await this.teamsService.findOne(dto.teamId); // confirms it's a real team
+      await this.teamsService.findOne(dto.teamId);
       owningTeamId = dto.teamId;
     }
 
@@ -93,7 +139,7 @@ export class RequestsService {
     const now = new Date().toISOString();
     const entity: RequestEntity = {
       id: uuid(),
-      requesterId: dto.requesterId,
+      requesterId: actor.userId,
       categoryId: dto.categoryId,
       owningTeamId,
       priorityId,
@@ -107,7 +153,7 @@ export class RequestsService {
     return this.repo.create(entity);
   }
 
-  async claim(id: string, dto: ClaimRequestDto): Promise<RequestEntity> {
+  async claim(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'claimed');
 
@@ -115,20 +161,22 @@ export class RequestsService {
       throw new ConflictException(`Request ${id} is already claimed by ${request.claimedBy}`);
     }
 
-    const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
+    if (!actor.teamIds.includes(request.owningTeamId)) {
+      throw new ForbiddenException('Only a member of the owning team can claim this request');
+    }
 
-    const updated = (await this.repo.update(id, { claimedBy: actor.id })) as RequestEntity;
+    const updated = (await this.repo.update(id, { claimedBy: actor.userId })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.CLAIMED,
-      actorId: actor.id,
+      actorId: actor.userId,
       fromValue: null,
-      toValue: actor.id,
+      toValue: actor.userId,
     });
     return updated;
   }
 
-  async unclaim(id: string, dto: ClaimRequestDto): Promise<RequestEntity> {
+  async unclaim(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'unclaimed');
 
@@ -136,19 +184,27 @@ export class RequestsService {
       throw new BadRequestException(`Request ${id} is not claimed`);
     }
 
+    if (request.claimedBy !== actor.userId) {
+      throw new ForbiddenException('Only the current claimant can unclaim this request');
+    }
+
     const previousClaimant = request.claimedBy;
     const updated = (await this.repo.update(id, { claimedBy: null })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.UNCLAIMED,
-      actorId: dto.actorId,
+      actorId: actor.userId,
       fromValue: previousClaimant,
       toValue: null,
     });
     return updated;
   }
 
-  async updateStatus(id: string, dto: UpdateStatusDto): Promise<RequestEntity> {
+  async updateStatus(
+    id: string,
+    dto: UpdateStatusDto,
+    actor: HubJwtPayload,
+  ): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'updated');
 
@@ -156,18 +212,22 @@ export class RequestsService {
       throw new BadRequestException('Request must be claimed before its status can change');
     }
 
+    if (request.claimedBy !== actor.userId) {
+      throw new ForbiddenException('Only the current claimant can change this request\'s status');
+    }
+
     const updated = (await this.repo.update(id, { status: dto.status })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.STATUS_CHANGE,
-      actorId: dto.actorId,
+      actorId: actor.userId,
       fromValue: request.status,
       toValue: dto.status,
     });
     return updated;
   }
 
-  async cancel(id: string, dto: CancelRequestDto): Promise<RequestEntity> {
+  async cancel(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
 
     if (request.status !== RequestStatus.NEW && request.status !== RequestStatus.IN_PROGRESS) {
@@ -176,24 +236,37 @@ export class RequestsService {
       );
     }
 
+    if (request.requesterId !== actor.userId) {
+      throw new ForbiddenException('Only the requester can cancel this request');
+    }
+
     const updated = (await this.repo.update(id, {
       status: RequestStatus.CANCELLED,
     })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.STATUS_CHANGE,
-      actorId: dto.actorId,
+      actorId: actor.userId,
       fromValue: request.status,
       toValue: RequestStatus.CANCELLED,
     });
     return updated;
   }
 
-  async reassign(id: string, dto: ReassignRequestDto): Promise<RequestEntity> {
+  async reassign(
+    id: string,
+    dto: ReassignRequestDto,
+    actor: HubJwtPayload,
+  ): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'reassigned');
 
-    const actor = await this.usersService.findOne(dto.actorId);
+    if (!actor.teamIds.includes(request.owningTeamId)) {
+      throw new ForbiddenException(
+        'Only a member of the current owning team can reassign this request',
+      );
+    }
+
     await this.teamsService.findOne(dto.newTeamId);
 
     if (dto.newTeamId === request.owningTeamId) {
@@ -225,7 +298,7 @@ export class RequestsService {
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.REASSIGNED,
-      actorId: actor.id,
+      actorId: actor.userId,
       fromValue: previousTeamId,
       toValue: dto.newTeamId,
     });
@@ -234,22 +307,30 @@ export class RequestsService {
       await this.requestEventsService.append({
         requestId: id,
         eventType: RequestEventType.CATEGORY_CHANGED,
-        actorId: actor.id,
+        actorId: actor.userId,
         fromValue: previousCategoryId,
         toValue: newCategoryId,
       });
     }
 
     return updated;
-    // Later: notify every member of the new owning team.
   }
 
-  async updatePriority(id: string, dto: UpdatePriorityDto): Promise<RequestEntity> {
+  async updatePriority(
+    id: string,
+    dto: UpdatePriorityDto,
+    actor: HubJwtPayload,
+  ): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
     this.assertNotTerminal(request, 'updated');
 
-    const actor = await this.usersService.findOne(dto.actorId); // confirms actorId is real
-    await this.prioritiesService.findOne(dto.priorityId); // confirms it's a real priority
+    if (!actor.teamIds.includes(request.owningTeamId)) {
+      throw new ForbiddenException(
+        'Only a member of the owning team can change this request\'s priority',
+      );
+    }
+
+    await this.prioritiesService.findOne(dto.priorityId);
 
     const previousPriorityId = request.priorityId;
     const updated = (await this.repo.update(id, { priorityId: dto.priorityId })) as RequestEntity;
@@ -257,7 +338,7 @@ export class RequestsService {
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.PRIORITY_CHANGED,
-      actorId: actor.id,
+      actorId: actor.userId,
       fromValue: previousPriorityId,
       toValue: dto.priorityId,
     });
@@ -265,7 +346,10 @@ export class RequestsService {
     return updated;
   }
 
-  async findAccessLogsForRequest(id: string) {
+  async findAccessLogsForRequest(id: string, actor: HubJwtPayload) {
+    if (actor.role !== 'admin') {
+      throw new ForbiddenException('Only an admin can view access logs');
+    }
     await this.requireRequest(id);
     return this.accessLogsService.findByRequestId(id);
   }

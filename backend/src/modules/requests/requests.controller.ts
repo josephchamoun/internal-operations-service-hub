@@ -1,29 +1,31 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
-import { ClaimRequestDto } from './dto/claim-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
-import { CancelRequestDto } from './dto/cancel-request.dto';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { HubJwtPayload } from '../auth/auth.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('requests')
 export class RequestsController {
   constructor(private readonly requestsService: RequestsService) {}
 
   @Get('mine')
-  findMine(@Query('actorId') actorId: string) {
-    return this.requestsService.findMine(actorId);
+  findMine(@CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findMine(actor);
   }
 
   @Get()
-  findAll() {
-    return this.requestsService.findAll();
+  findAll(@CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findAll(actor);
   }
 
   @Get(':id/events')
-  findEvents(@Param('id') id: string) {
-    return this.requestsService.findEvents(id);
+  findEvents(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findEvents(id, actor);
   }
 
   @Get(':id')
@@ -32,47 +34,59 @@ export class RequestsController {
   }
 
   @Get(':id/full')
-  findFullDetails(@Param('id') id: string, @Query('actorId') actorId?: string) {
-    return this.requestsService.findFullDetails(id, actorId);
+  findFullDetails(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findFullDetails(id, actor);
   }
 
   @Post()
-  create(@Body() dto: CreateRequestDto) {
-    return this.requestsService.create(dto);
+  create(@Body() dto: CreateRequestDto, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.create(dto, actor);
   }
 
   @Patch(':id/claim')
-  claim(@Param('id') id: string, @Body() dto: ClaimRequestDto) {
-    return this.requestsService.claim(id, dto);
+  claim(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.claim(id, actor);
   }
 
   @Patch(':id/unclaim')
-  unclaim(@Param('id') id: string, @Body() dto: ClaimRequestDto) {
-    return this.requestsService.unclaim(id, dto);
+  unclaim(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.unclaim(id, actor);
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
-    return this.requestsService.updateStatus(id, dto);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateStatusDto,
+    @CurrentUser() actor: HubJwtPayload,
+  ) {
+    return this.requestsService.updateStatus(id, dto, actor);
   }
 
   @Patch(':id/reassign')
-  reassign(@Param('id') id: string, @Body() dto: ReassignRequestDto) {
-    return this.requestsService.reassign(id, dto);
+  reassign(
+    @Param('id') id: string,
+    @Body() dto: ReassignRequestDto,
+    @CurrentUser() actor: HubJwtPayload,
+  ) {
+    return this.requestsService.reassign(id, dto, actor);
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string, @Body() dto: CancelRequestDto) {
-    return this.requestsService.cancel(id, dto);
+  cancel(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.cancel(id, actor);
   }
 
   @Get(':id/access-logs')
-  findAccessLogs(@Param('id') id: string) {
-    return this.requestsService.findAccessLogsForRequest(id);
+  findAccessLogs(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findAccessLogsForRequest(id, actor);
   }
 
   @Patch(':id/priority')
-  updatePriority(@Param('id') id: string, @Body() dto: UpdatePriorityDto) {
-    return this.requestsService.updatePriority(id, dto);
+  updatePriority(
+    @Param('id') id: string,
+    @Body() dto: UpdatePriorityDto,
+    @CurrentUser() actor: HubJwtPayload,
+  ) {
+    return this.requestsService.updatePriority(id, dto, actor);
   }
 }
