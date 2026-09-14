@@ -1,4 +1,8 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiUrl } from "../api/client";
+import { useAuth } from "../auth";
 import { useApiQuery } from "../hooks/use-api-query";
 import type { RequestItem } from "../types";
 import { Badge, StatusBadge } from "../components/badge";
@@ -15,7 +19,20 @@ function formatDate(date: string) {
 
 export function LimitedRequestPage() {
   const { id = "" } = useParams();
+  const { token } = useAuth();
+  const client = useQueryClient();
   const request = useApiQuery<RequestItem>(["request", id], `/requests/${id}`);
+
+  useEffect(() => {
+    if (!token) return;
+    const stream = new EventSource(
+      apiUrl(`/requests/${id}/stream?token=${encodeURIComponent(token)}`),
+    );
+    stream.onmessage = () => {
+      void client.invalidateQueries({ queryKey: ["request", id] });
+    };
+    return () => stream.close();
+  }, [id, token, client]);
 
   if (request.isPending) return <Loading />;
   if (request.isError)

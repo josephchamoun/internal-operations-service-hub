@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiUrl } from "../api/client";
 import { useAuth } from "../auth";
 import { useApiQuery } from "../hooks/use-api-query";
 import { Card } from "../components/card";
@@ -15,7 +17,8 @@ const statuses: RequestStatus[] = [
   "Cancelled",
 ];
 export function RequestListPage({ mine = false }: { mine?: boolean }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const client = useQueryClient();
   const query = useApiQuery<RequestItem[]>(
     [mine ? "mine" : "requests"],
     mine ? "/requests/mine" : "/requests",
@@ -24,9 +27,21 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
   const [status, setStatus] = useState("");
   const [team, setTeam] = useState("");
   const [claimState, setClaimState] = useState("all");
+  useEffect(() => {
+    if (!token) return;
+    const stream = new EventSource(
+      apiUrl(`/requests/stream/all?token=${encodeURIComponent(token)}`),
+    );
+    stream.onmessage = () => {
+      void client.invalidateQueries({ queryKey: ["requests"] });
+      void client.invalidateQueries({ queryKey: ["mine"] });
+    };
+    return () => stream.close();
+  }, [token, client]);
   if (query.isPending || teams.isPending) return <Loading />;
   if (query.isError)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
+
   const shown = query.data.filter(
     (r) =>
       ((!status || r.status === status) &&

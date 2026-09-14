@@ -34,3 +34,4 @@ temp/
 
 # database
 prisma/dev.db
+prisma/test.db

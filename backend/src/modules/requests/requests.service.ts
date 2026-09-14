@@ -177,7 +177,7 @@ export class RequestsService {
       toValue: actor.userId,
     });
 
-    this.liveUpdatesService.emit(id, 'claimed', { claimedBy: actor.userId });
+    this.liveUpdatesService.emit(id, request.owningTeamId, request.requesterId, 'claimed', { claimedBy: actor.userId });
     // Per product-spec.md: claiming itself does not trigger an external
     // notification, since the live push above already reflects it for
     // anyone currently watching the request.
@@ -206,7 +206,7 @@ export class RequestsService {
       toValue: null,
     });
 
-    this.liveUpdatesService.emit(id, 'unclaimed', { previousClaimant });
+    this.liveUpdatesService.emit(id, updated.owningTeamId, updated.requesterId, 'unclaimed', { previousClaimant });
 
     void this.notificationsService.notifyTeam(
       updated.owningTeamId,
@@ -242,7 +242,7 @@ export class RequestsService {
       toValue: dto.status,
     });
 
-    this.liveUpdatesService.emit(id, 'status_changed', { status: dto.status });
+    this.liveUpdatesService.emit(id, updated.owningTeamId, updated.requesterId, 'status_changed', { status: dto.status });
 
     void this.notificationsService.notifyUser(
       updated.requesterId,

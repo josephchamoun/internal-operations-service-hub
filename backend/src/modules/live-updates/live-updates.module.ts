@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LiveUpdatesService } from './live-updates.service';
-import { LiveUpdatesController } from './live-updates.controller';
 
 @Module({
   imports: [
@@ -18,8 +17,7 @@ import { LiveUpdatesController } from './live-updates.controller';
       },
     }),
   ],
-  controllers: [LiveUpdatesController],
   providers: [LiveUpdatesService],
-  exports: [LiveUpdatesService],
+  exports: [LiveUpdatesService, JwtModule],
 })
 export class LiveUpdatesModule {}

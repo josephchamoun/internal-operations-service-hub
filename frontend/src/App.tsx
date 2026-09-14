@@ -13,6 +13,7 @@ import { UsersPage } from "./pages/admin/users-page";
 import { TeamsPage } from "./pages/admin/teams-page";
 import { CategoriesPage } from "./pages/admin/categories-page";
 import { PrioritiesPage } from "./pages/admin/priorities-page";
+import { AuthCallbackPage } from "./pages/auth-callback-page";
 
 function Protected({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/" element={<Navigate to="/queue" replace />} />
       <Route
         path="/queue"

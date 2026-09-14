@@ -34,12 +34,12 @@ const priorities: PriorityRow[] = [
 ];
 
 const users: UserRow[] = [
-  { id: 'u1', name: 'Alice Employee', email: 'alice@company.com', role: 'employee', teamIds: [] },
+  { id: 'u1', name: 'Alice Employee', email: 'chamounjoseph2022_outlook.com#EXT#@chamounjoseph2022outlook.onmicrosoft.com', role: 'employee', teamIds: [] },
   { id: 'u2', name: 'Ben Employee', email: 'ben@company.com', role: 'employee', teamIds: [] },
-  { id: 'it-agent-1', name: 'Sam IT', email: 'sam@company.com', role: 'team_member', teamIds: ['IT'] },
-  { id: 'it-agent-2', name: 'Riley IT', email: 'riley@company.com', role: 'team_member', teamIds: ['IT'] },
-  { id: 'hr-agent-1', name: 'Maya HR', email: 'maya@company.com', role: 'team_member', teamIds: ['HR'] },
-  { id: 'admin-1', name: 'Jordan Admin', email: 'jordan@company.com', role: 'admin', teamIds: [] },
+  { id: 'it-agent-1', name: 'Sam IT', email: 'itagent1@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['IT'] },
+  { id: 'it-agent-2', name: 'Riley IT', email: 'it-agent-2@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['IT'] },
+  { id: 'hr-agent-1', name: 'Maya HR', email: 'hragent1@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['HR'] },
+  { id: 'admin-1', name: 'Jordan Admin', email: 'admin-1@chamounjoseph2022outlook.onmicrosoft.com', role: 'admin', teamIds: [] },
   { id: 'main-agent-1', name: 'HR/IT agent', email: 'main@company.com', role: 'team_member', teamIds: ['IT', 'HR'] },
     // Dev/test-only accounts — used only by the dev-login endpoint, never via real Entra ID
   { id: 'dev-manager', name: 'IT Member (test)', email: 'dev-manager@test.local', role: 'team_member', teamIds: ['IT'] },

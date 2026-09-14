@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { NotificationsService } from '../src/modules/notifications/notifications.service';
+import { createTestDatabase, resetFixtures } from './test-database';
 
 describe('Requests lifecycle (e2e)', () => {
   let app: INestApplication;
@@ -10,16 +12,25 @@ describe('Requests lifecycle (e2e)', () => {
   let createdRequestId: string;
 
   beforeAll(async () => {
+    // Point Prisma at the isolated test database, not dev.db. Must happen
+    // before AppModule (and PrismaService within it) is compiled.
+    process.env.DATABASE_URL = 'file:./prisma/test.db';
+
+    const testPrisma = createTestDatabase();
+    await resetFixtures(testPrisma);
+    await testPrisma.$disconnect();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(NotificationsService)
+      .useValue({ notifyTeam: jest.fn(), notifyUser: jest.fn() })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 
-    // Log in as both test identities via dev-login (same JWT-issuing path
-    // as a real Entra ID login — see auth.service.ts).
     const employeeRes = await request(app.getHttpServer())
       .post('/auth/dev-login')
       .send({ userId: 'dev-employee' });
@@ -29,7 +40,7 @@ describe('Requests lifecycle (e2e)', () => {
       .post('/auth/dev-login')
       .send({ userId: 'dev-manager' });
     managerToken = managerRes.body.accessToken;
-  });
+  },  30000);
 
   afterAll(async () => {
     await app.close();
@@ -54,14 +65,14 @@ describe('Requests lifecycle (e2e)', () => {
   it('denies claim from an actor not on the owning team', async () => {
     await request(app.getHttpServer())
       .patch(`/requests/${createdRequestId}/claim`)
-      .set('Authorization', `Bearer ${employeeToken}`) // dev-employee has no team
+      .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
   });
 
   it('allows claim from an actor on the owning team', async () => {
     const res = await request(app.getHttpServer())
       .patch(`/requests/${createdRequestId}/claim`)
-      .set('Authorization', `Bearer ${managerToken}`) // dev-manager is on IT
+      .set('Authorization', `Bearer ${managerToken}`)
       .expect(200);
 
     expect(res.body.claimedBy).toBe('dev-manager');
