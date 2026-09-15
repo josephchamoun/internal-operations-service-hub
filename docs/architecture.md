@@ -26,9 +26,9 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Login and authentication.** The hub's own login screen. It does not store passwords itself; it hands identity verification off to the company's existing identity provider.
 
-**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
+**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. Light per-person rate limiting on submissions is a later production-hardening step, not something this phase implements; accidental duplicate submits are left to the client and to ordinary request validation for now. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
 
-**Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone outside a request's current owning team opens its full details despite only being shown the limited misrouted view, recording who and when.This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
+**Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone other than the requester — the owning team or the Admin — opens a request's full details, recording who and when. The requester's own views are not logged. This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
 
 **Notification dispatcher.** Turns internal events, like a new request arriving, a status changing, or a message being sent, into an outbound notification. It works independently of the request-writing process, so a slow or failed notification never holds up or undoes the request itself.
 
@@ -55,7 +55,7 @@ No other outside systems are involved. There's no courier, payment processor, or
 - The requester and the owning team can exchange messages on a request at any point while it's still open, not limited to one exchange or gated by status. Each new message is saved and pushed live to anyone watching the request; sending one never changes the status on its own. The backend also tells the notification dispatcher to alert whichever side didn't send the message, since the live push only reaches someone
   actively viewing the request at that moment, not someone who's stepped away.
 
-- If a request was routed to the wrong team, any member of the current owning team can reassign it without needing to open the full details first. The backend moves it to the right team, keeps the original history intact, and notifies the new owner.
+- If a request was routed to the wrong team, any member of the current owning team can reassign it without needing to open the full details first. The backend moves it to the right team, clears any existing claim so it lands unclaimed in the new team's queue, keeps the original history intact, and notifies the new owner.
 
 - In the background, the escalation scheduler periodically checks for requests that have sat too long without being picked up. The check can run often; it only actually asks the notification dispatcher to remind the owning team once that request's priority level's escalation window has elapsed since its last reminder, sending to each member individually except anyone who has personally silenced that request. Silencing is a per-user setting, not a team-wide one, so the rest of the team keeps getting reminded even if one member opts out for themselves. A team member can silence or un-silence a request for themselves at any time; claiming or reassigning it also clears their own silence, so it doesn't quietly persist past the point it was meant for.
 
@@ -77,7 +77,7 @@ This isn't something drawn as its own box in the diagram. It's a rule the backen
 
 - For a request that was routed to the wrong team and contains sensitive information, the receiving team can see enough to recognize it doesn't belong to them, like the category, who submitted it, when, and a short subject line, without the backend requiring them to open the full details first. Choosing to open it anyway is a human decision the system can't prevent.
 
-- If a team member opens the full details of a request outside their own team's queue despite that limited view, the backend logs who did it and when. This doesn't prevent the access, the system still can't stop that human decision, but it means the decision isn't invisible afterward. The log is visible only to the Admin, not to the requester or to other teams, consistent with the Admin's existing oversight role rather than adding friction to anyone's normal day-to-day use.
+- Opening a request's full details is logged when the viewer is not the requester (owning-team member or Admin). That does not prevent the access; it only records who opened it and when, because the system cannot tell a correctly-routed view from a misrouted one at that moment. The requester's own views are not logged. The log is visible only to the Admin. Someone with no relationship to the request cannot open it at all, not even the limited view.
 
 ### 3.2 Failure scenarios
 
@@ -135,7 +135,7 @@ Volume is assumed to be low to moderate rather than high-throughput or public fa
 
 - Sending a notification out to the external channel happens asynchronously and separately from saving the request, specifically so a slow or failed notification never delays or blocks the action the person is actually waiting on.
 
-- Submissions are lightly rate limited per person inside the backend, mainly to catch accidental duplicate submissions if many people are using the system at the same time.
+- Submissions are not rate limited in this phase. A light per-person limit was considered to catch accidental duplicate submits, and is left as later production-hardening rather than something the current backend enforces.
 
 ### 4.2 Major decisions and rationale
 

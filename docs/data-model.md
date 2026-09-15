@@ -116,7 +116,7 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 
 A row existing means that user currently has that request silenced. Un-silencing deletes the row.
 
-**AccessLog:** records every time someone other than the requester; the owning team or the Admin, opens a request's full details, since the system cannot tell a correctly-routed view from a misrouted one at the point of viewing.
+**AccessLog:** records every time someone other than the requester — the owning team or the Admin — opens a request's full details, since the system cannot tell a correctly-routed view from a misrouted one at the point of viewing. The requester's own full-detail views are not logged.
 
 | Field       | Type          | Notes |
 | ----------- | ------------- | ----- |
@@ -159,7 +159,7 @@ At most one claimed_by value exists per request at any time. While claimed, only
 
 ### 2.3 Reassignment
 
-Any member of the current owning team can reassign a request to a different team. This updates owning_team_id and writes a reassigned event recording the old and new team, without touching status, claim state, or any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
+Any member of the current owning team can reassign a request to a different team. This updates owning_team_id, clears claimed_by so the previous claim does not carry over to the new team, and writes a reassigned event recording the old and new team, without touching status or any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
 
 ### 2.4 Escalation
 
