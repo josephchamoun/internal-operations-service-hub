@@ -6,14 +6,15 @@ import { Button } from "./button";
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const admin = user?.role === "admin";
+  const hasQueue = admin || (user?.teamIds?.length ?? 0) > 0;
   return (
     <div className="app-shell">
       <header>
-        <Link to="/queue" className="brand">
+        <Link to={hasQueue ? "/queue" : "/mine"} className="brand">
           Ops Hub
         </Link>
         <nav>
-          <NavLink to="/queue">Queue</NavLink>
+          {hasQueue && <NavLink to="/queue">Queue</NavLink>}
           <NavLink to="/mine">My requests</NavLink>
           <NavLink to="/new">New request</NavLink>
           {admin && <NavLink to="/admin/users">Admin</NavLink>}

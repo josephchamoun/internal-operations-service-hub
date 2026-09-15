@@ -22,7 +22,23 @@ function Protected({ children }: { children: ReactNode }) {
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  return user?.role === "admin" ? children : <Navigate to="/queue" replace />;
+  return user?.role === "admin" ? children : <Navigate to="/" replace />;
+}
+
+// A "queue" (the team/admin-wide request list) only means anything for an
+// admin or a user who's actually on a team. An employee with no team sees
+// the exact same data on /mine, so /queue is redirected away for them
+// rather than shown as a redundant page.
+function HasQueue({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const hasQueue = user?.role === "admin" || (user?.teamIds?.length ?? 0) > 0;
+  return hasQueue ? children : <Navigate to="/mine" replace />;
+}
+
+function Home() {
+  const { user } = useAuth();
+  const hasQueue = user?.role === "admin" || (user?.teamIds?.length ?? 0) > 0;
+  return <Navigate to={hasQueue ? "/queue" : "/mine"} replace />;
 }
 
 export default function App() {
@@ -30,12 +46,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      <Route path="/" element={<Navigate to="/queue" replace />} />
+      <Route path="/" element={<Home />} />
       <Route
         path="/queue"
         element={
           <Protected>
-            <RequestListPage />
+            <HasQueue>
+              <RequestListPage />
+            </HasQueue>
           </Protected>
         }
       />
@@ -127,7 +145,7 @@ export default function App() {
           </Protected>
         }
       />
-      <Route path="*" element={<Navigate to="/queue" replace />} />
+      <Route path="*" element={<Home />} />
     </Routes>
   );
 }

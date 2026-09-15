@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "../api/client";
 import { useAuth } from "../auth";
@@ -23,6 +23,7 @@ export function FullRequestPage() {
   const { id = "" } = useParams();
   const { token, user } = useAuth();
   const client = useQueryClient();
+  const navigate = useNavigate();
   const detail = useApiQuery<RequestItem>(
     ["full-request", id],
     `/requests/${id}/full`,
@@ -34,12 +35,20 @@ export function FullRequestPage() {
   const [teamId, setTeamId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [priorityId, setPriorityId] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editSubject, setEditSubject] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["full-request", id] });
     void client.invalidateQueries({ queryKey: ["request", id] });
     void client.invalidateQueries({ queryKey: ["requests"] });
     void client.invalidateQueries({ queryKey: ["mine"] });
   };
+  useEffect(() => {
+    if (!detail.data) return;
+    setEditSubject(detail.data.subject);
+    setEditDescription(detail.data.description ?? "");
+  }, [detail.data]);
   useEffect(() => {
     if (!token) return;
     const stream = new EventSource(
@@ -54,7 +63,21 @@ export function FullRequestPage() {
         method: "PATCH",
         ...(body ? { body: JSON.stringify(body) } : {}),
       }),
-    onSuccess: refresh,
+    onSuccess: (_data, variables) => {
+      refresh();
+      if (variables.path.endsWith("/details")) {
+        setEditing(false);
+      }
+      // Reassigning moves the request to a different team's ownership.
+      // The actor who reassigned it (on the *old* owning team) typically
+      // loses view access the moment that happens, unless they're also
+      // the requester or an admin — so staying on this page just means
+      // immediately hitting the 403 ErrorState below. Send them back to
+      // the queue instead, where the request will no longer appear.
+      if (variables.path.endsWith("/reassign")) {
+        navigate("/queue");
+      }
+    },
   });
   if (
     detail.isPending ||
@@ -72,6 +95,11 @@ export function FullRequestPage() {
   const isClaimant = user?.userId === request.claimedBy;
   const isActive = !["Resolved", "Cancelled"].includes(request.status);
   const canMakeAction = isActive && (isTeamMember || isRequester);
+  const canEdit =
+    isRequester &&
+    request.status === "New" &&
+    !request.claimedBy &&
+    !isLimited;
   return (
     <>
       <div className="page-heading detail-title">
@@ -93,8 +121,74 @@ export function FullRequestPage() {
             <p className="notice">
               Limited view — you are not on the owning team for this request.
             </p>
+          ) : editing ? (
+            <form
+              className="form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                action.mutate({
+                  path: `/requests/${id}/details`,
+                  body: {
+                    subject: editSubject,
+                    description: editDescription,
+                  },
+                });
+              }}
+            >
+              <label>
+                Subject
+                <input
+                  value={editSubject}
+                  onChange={(event) => setEditSubject(event.target.value)}
+                  required
+                  maxLength={200}
+                />
+              </label>
+              <label>
+                Description
+                <textarea
+                  value={editDescription}
+                  onChange={(event) => setEditDescription(event.target.value)}
+                  required
+                  rows={7}
+                />
+              </label>
+              {action.isError && (
+                <p className="form-error">{action.error.message}</p>
+              )}
+              <div className="actions">
+                <Button type="submit" disabled={action.isPending}>
+                  {action.isPending ? "Saving…" : "Save changes"}
+                </Button>
+                <Button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setEditing(false);
+                    setEditSubject(request.subject);
+                    setEditDescription(request.description ?? "");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
           ) : (
             <p className="description">{request.description}</p>
+          )}
+          {canEdit && !editing && (
+            <div className="detail-links">
+              <Button
+                className="secondary"
+                onClick={() => {
+                  setEditSubject(request.subject);
+                  setEditDescription(request.description ?? "");
+                  setEditing(true);
+                }}
+              >
+                Edit details
+              </Button>
+            </div>
           )}
           <dl>
             <dt>Category</dt>

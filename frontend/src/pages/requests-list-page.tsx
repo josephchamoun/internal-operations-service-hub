@@ -27,6 +27,7 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
   const [status, setStatus] = useState("");
   const [team, setTeam] = useState("");
   const [claimState, setClaimState] = useState("all");
+  const canBeClaimant = (user?.teamIds?.length ?? 0) > 0;
   useEffect(() => {
     if (!token) return;
     const stream = new EventSource(
@@ -63,13 +64,6 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
                 : "Team queue"}
           </div>
           <h1>{mine ? "My requests" : "Requests"}</h1>
-          {!mine && user?.role === "employee" && (
-            <p className="page-description">
-              This is your personal request queue. As an employee, it contains
-              the same requests as My requests; use this page to track their
-              handling status.
-            </p>
-          )}
         </div>
         <Link className="btn" to="/new">
           New request
@@ -94,7 +88,7 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
             >
               <option value="all">All requests</option>
               <option value="unclaimed">Unclaimed</option>
-              <option value="mine">Claimed by me</option>
+              {canBeClaimant && <option value="mine">Claimed by me</option>}
               <option value="other">Claimed by someone else</option>
             </select>
           </label>
