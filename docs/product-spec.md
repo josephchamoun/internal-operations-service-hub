@@ -55,20 +55,20 @@ The system must:
 12. The system must identify who submitted each request. Team or department association for each user is assigned by the Admin inside the hub, and a user may be assigned to more than one team at once; it is not assumed to come from the identity provider, since login only confirms who someone is, not their team(s).
 13. The Admin defines and maintains the list of categories available at submission, each linked to a default owning team. The employee picks from that list. If none of the listed categories fit, the employee selects "Other," which then lets them pick the owning team directly for that submission.
 14. Allow the requester to cancel their own request if it's no longer needed. A cancelled request stays in the system with a "Cancelled" status (not deleted) so the audit trail is preserved.
-15. Allow the requester to edit their own request's details only while it is still in "New" status (not yet picked up by the owning team). Once the owning team has started working on it, the requester can no longer edit it directly.
+15. Allow the requester to edit their own request's subject and description only while it is still in "New" status **and unclaimed**. Claiming is what counts as the owning team picking the request up, even if its status is still New, because claim and status change are separate actions. Once a request is claimed, or once its status has moved out of New, the requester can no longer edit those fields directly; further information goes through messages.
 16. If a request remains untouched by the owning team for a defined period after submission, the system must automatically send a reminder or escalation notification to the owning team, unless that team has silenced escalation for this specific request.
 17. Category selection is mandatory at submission, either from the Admin-defined list or "Other" with a manually picked team, so no request is ever left uncategorized. If the wrong category or team is picked, it can still be corrected via reassignment.
 18. If a request is misrouted and contains sensitive information, the receiving team should be able to recognize it doesn't belong to them and send it to the correct team without opening or viewing the sensitive details. If a team member chooses to view it anyway, that is on them and not something the system can prevent.
 19. Allow a member of the owning team to claim a request, becoming its sole assignee. Only one team member may hold a claim on a request at a time; the rest of the team can still see it in the shared queue, marked as claimed and by whom, but cannot claim it themselves until it is unclaimed. A claimed request can be unclaimed, or the request itself reassigned to a different team. When a request becomes unclaimed, the whole owning team is notified again, the same as when it first arrived. Claiming itself does not trigger a separate notification, since the team's queue already reflects the change as it happens.
 20. Allow the requester and the owning team to exchange messages on a request at any point while it is not Resolved or Cancelled. Messages form a single ongoing thread, not limited to one exchange or tied to a specific status. Sending a message never changes the request's status on its own. The recipient side (the requester if the team sent it, the owning team if the requester sent it) is notified of a new message, since live updates alone only reach someone actively viewing the request at that moment.
-21. Allow the requester to attach files (e.g., photos, screenshots, documents) to a request at submission time, and optionally with a message. Attachments follow the exact same visibility rules as the rest of the request. Only the requester and the current owning team can view them; no other team or employee can access them. Whoever uploaded an attachment can edit or remove it only while the request is still in 'New' status. Once the owning team has started working on it, attachments become read only, including for whoever added them.
+21. Allow the requester to attach files (e.g., photos, screenshots, documents) to a request at submission time, and optionally with a message. Attachments follow the exact same visibility rules as the rest of the request. Only the requester and the current owning team can view them; no other team or employee can access them. Whoever uploaded an attachment can edit or remove it only while the request is still in 'New' status and unclaimed. Once the request is claimed, or its status has moved out of New, attachments become read only, including for whoever added them.
 22. Provide a filterable view of requests by status (New, In Progress, Resolved, Cancelled), and for owning teams, additionally filterable by category, so requesters and owning teams can find relevant requests without scanning a flat unsorted list. This filtering respects the same visibility rules as everywhere else: a requester only filters within their own requests, an owning team only filters within requests routed to them, and the Admin can filter across all requests and all categories.
 23. The System Admin must be able to assign each user's role within the hub (employee, member of one or more owning teams such as IT or HR, admin). This is independent of whatever team or department an external identity system may report; the hub's own role determines what someone can actually do inside the hub.
 24. A user who holds an owning-team role can still submit requests as a regular employee. This holds regardless of how many teams the user belongs to. The category chosen determines the single owning team for that request, independent of the submitter's own team memberships. A member of one owning team (e.g., IT) submitting a request that belongs to a different team (e.g., HR) is routed there exactly as it would be for anyone else.
 25. Allow each team member to silence escalation reminders for a specific request individually, for cases where they've seen it and are deliberately holding off rather than having forgotten it. Silencing only affects that one person; it does not silence the reminder for the rest of the owning team, so the system keeps notifying anyone on the team who hasn't silenced it themselves. A silenced request stops reminding that specific person until they un-silence it, or until they claim or reassign it, at which point normal escalation rules apply again for them.
 26. The Admin defines a fixed list of priority levels (e.g. Low, Normal, Urgent), each with its own default escalation window. The requester picks one from that list at submission (defaulting to Normal if left unset); any member of the owning team can change it after seeing the request, not only whoever has claimed it, since correcting an over-marked priority is often most useful right when the request lands, before anyone's claimed it yet. This follows the same pattern as category selection: a fixed, Admin-maintained list rather than free text.
 27. The escalation scheduler's check frequency and the actual reminder frequency are independent. The scheduler may check for stale requests often (e.g. every couple of hours) without reminding the team that often; a reminder for a given request only goes out once the priority level's escalation window has elapsed since the last reminder for that request.
-28. If a team member opens the full details of a request outside their own team's queue (i.e. a request they can only see the limited misrouted-view of), that access is logged with who and when. This log is visible only to the Admin. It does not prevent the access, it only makes an otherwise-invisible decision visible for oversight.
+28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
 
 ## 5. Non-Functional Requirements
 
@@ -225,7 +225,7 @@ Given any request ever submitted, when queried later, then a persistent record e
 Given the Admin or an owning team searches within their permitted scope, when they enter search terms, then matching requests are returned without needing to scan a full unsorted list.
 
 **Out-of-team full-view access is logged**
-Given a team member opens the full details of a request outside their own team's queue (i.e., one they could otherwise only see the limited misrouted view of), when that access occurs, then it is logged with who accessed it and when.
+Given a request's full details are opened by the owning team or the Admin (not the requester), when that access occurs, then it is logged with who accessed it and when."
 
 **Access log visible only to Admin**
 Given such an access log entry exists, when anyone other than the Admin attempts to view it, then they cannot; only the Admin can see this log.
@@ -306,17 +306,20 @@ Given a user who belongs to multiple teams submits or reassigns a request, when 
 **Cancellation preserves the record**
 Given a request the requester submitted, when they cancel it (in any status prior to Resolved), then its status becomes "Cancelled" and the record is retained, not deleted.
 
-**Editable while New**
-Given a request still in "New" status, when the requester edits its details, then the changes are saved.
+**Editable while New and unclaimed**
+Given a request still in "New" status and unclaimed, when the requester edits its subject and description, then the changes are saved.
 
-**Locked once work starts**
-Given a request has moved past "New" status (owning team has started work), when the requester attempts to edit its details, then the edit is rejected.
+**Locked once claimed**
+Given a request has been claimed (even if its status is still New), when the requester attempts to edit its details, then the edit is rejected.
 
-**Attachments editable while New**
-Given a request in "New" status with an attachment, when the uploader edits or removes that attachment, then the change succeeds.
+**Locked once status leaves New**
+Given a request has moved past "New" status, when the requester attempts to edit its details, then the edit is rejected.
 
-**Attachments locked once work starts**
-Given a request has moved past "New" status, when anyone, including the original uploader, attempts to edit or remove an attachment, then the action is rejected (attachments become read-only).
+**Attachments editable while New and unclaimed**
+Given an unclaimed request in "New" status with an attachment, when the uploader edits or removes that attachment, then the change succeeds.
+
+**Attachments locked once claimed or once work starts**
+Given a request has been claimed, or has moved past "New" status, when anyone, including the original uploader, attempts to edit or remove an attachment, then the action is rejected (attachments become read-only).
 
 **Attachment visibility matches request visibility**
 Given attachments on a request, when anyone other than the requester or current owning team attempts to view them, then access is denied. Same visibility rule as the request itself.

@@ -45,14 +45,14 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 
 **User:** a person known to the hub, layered on top of the identity the identity provider confirms.
 
-| Field          | Type                                                           | Notes                                                                                   |
-| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| user_id        | PK                                                             |                                                                                         |
-| idp_subject_id | unique                                                         | stable reference to the identity provider's identity, used for login, never for contact |
-| name           | text                                                           | Admin-set                                                                               |
-| email          | text                                                           | contact address for notifications, Admin-set                                            |
+| Field          | Type                               | Notes                                                                                   |
+| -------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| user_id        | PK                                 |                                                                                         |
+| idp_subject_id | unique                             | stable reference to the identity provider's identity, used for login, never for contact |
+| name           | text                               | Admin-set                                                                               |
+| email          | text                               | contact address for notifications, Admin-set                                            |
 | role           | enum(employee, team_member, admin) | Admin-assigned, independent of the identity provider                                    |
-| created_at     | timestamp                                                      |                                                                                         |
+| created_at     | timestamp                          |                                                                                         |
 
 **Request:** the central entity, representing one submitted request from creation to resolution.
 
@@ -116,7 +116,7 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 
 A row existing means that user currently has that request silenced. Un-silencing deletes the row.
 
-**AccessLog:** records that a user opened a request's full details despite not owning it.
+**AccessLog:** records every time someone other than the requester; the owning team or the Admin, opens a request's full details, since the system cannot tell a correctly-routed view from a misrouted one at the point of viewing.
 
 | Field       | Type          | Notes |
 | ----------- | ------------- | ----- |
@@ -167,9 +167,9 @@ The escalation scheduler checks unclaimed New requests independently of how ofte
 
 ### 2.5 Editability
 
-A request's subject and description can only be edited by the requester while the status is still New. Once any owning team action moves it out of New, the requester loses edit access to those fields, and messages become the only channel left for adding more information.
+A request's subject and description can only be edited by the requester while the status is still New **and the request is unclaimed**. Claiming is what counts as the owning team picking the request up, even though claim and status change are separate actions and status may still be New after a claim. Once the request is claimed, or once any action moves it out of New, the requester loses edit access to those fields, and messages become the only channel left for adding more information.
 
-The same restriction applies to attachments. Whoever uploaded an attachment can edit or remove it only while the request is still New. Once the status moves to anything else, attachments become read only, including for the person who added them.
+The same restriction applies to attachments. Whoever uploaded an attachment can edit or remove it only while the request is still New and unclaimed. Once it is claimed, or the status moves to anything else, attachments become read only, including for the person who added them.
 
 Messages follow a different restriction, tied to the terminal statuses rather than New. Neither the requester nor the owning team can send a new message once a request has reached Resolved or Cancelled.
 
@@ -177,7 +177,7 @@ Messages follow a different restriction, tied to the terminal statuses rather th
 
 These rules are enforced on every read and write, not assumed from what any interface happens to show.
 
-A requester may read and write only requests where they are the requester. A team member may read requests owned by any team they belong to, and may change a request's status only if they are the current claimant; an unclaimed request must be claimed first before its status can be moved. Messages and attachments carry no independent access rules of their own, they follow whatever request they belong to. The Admin may read every request, but by default sees only the limited fields (category, requester, created at, and subject) unless deliberately opening the full detail, the same limited view a misrouted receiving team sees. Silence records are only readable and writable by the user they belong to. Access log entries are written automatically whenever someone opens a request's full detail outside their normal ownership, and are readable only by the Admin.
+A requester may read and write only requests where they are the requester. Subject and description may be written only while the request is New and unclaimed; after that, the requester may still cancel (from New or In Progress) but cannot edit those fields. A team member may read requests owned by any team they belong to, and may change a request's status only if they are the current claimant; an unclaimed request must be claimed first before its status can be moved. The Admin does not bypass the requester-only edit or cancel rules. Messages and attachments carry no independent access rules of their own, they follow whatever request they belong to. The Admin may read every request, but by default sees only the limited fields (category, requester, created at, and subject) unless deliberately opening the full detail, the same limited view a misrouted receiving team sees. Silence records are only readable and writable by the user they belong to. Access log entries are written automatically every time the owning team or the Admin opens a request's full detail; never for the requester's own views, and are readable only by the Admin.
 
 ### 2.7 Sensitive data rule
 

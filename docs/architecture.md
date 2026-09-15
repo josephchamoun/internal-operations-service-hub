@@ -26,7 +26,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Login and authentication.** The hub's own login screen. It does not store passwords itself; it hands identity verification off to the company's existing identity provider.
 
-**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
+**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
 
 **Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone outside a request's current owning team opens its full details despite only being shown the limited misrouted view, recording who and when.This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
 
@@ -67,9 +67,9 @@ No other outside systems are involved. There's no courier, payment processor, or
 
 This isn't something drawn as its own box in the diagram. It's a rule the backend checks on every single read and write, never something assumed just because the interface hides an option from view.
 
-- An employee can only see and act on their own requests. A team member can only see and act on requests routed to any team they belong to, but only the current claimant may change a request's status, aside from the requester being able to cancel their own. An unclaimed request must be claimed before its status can move at all, though the rest of the team still sees it in the queue along with who holds the claim. Messages follow the team boundary: only the requester and the current owning team can read or add to a request's message thread, at any point while it's still open.
+- An employee can only see and act on their own requests. A team member can only see and act on requests routed to any team they belong to, but only the current claimant may change a request's status, aside from the requester being able to cancel their own. The requester may edit subject and description only while the request is New and unclaimed; claiming locks those fields even if status is still New. An unclaimed request must be claimed before its status can move at all, though the rest of the team still sees it in the queue along with who holds the claim. Messages follow the team boundary: only the requester and the current owning team can read or add to a request's message thread, at any point while it's still open.
 
-- Attachments can only be edited or removed by whoever uploaded them, and only while the request is still New. Once it moves out of New, attachments become read only for everyone, including the uploader.
+- Attachments can only be edited or removed by whoever uploaded them, and only while the request is still New and unclaimed. Once it is claimed or moves out of New, attachments become read only for everyone, including the uploader.
 
 - Belonging to an owning team doesn't change how someone's own requests are handled. Routing is based only on the category chosen for a given request, never on who submitted it, so a member of the IT team submitting a request of their own is treated exactly like any other employee.
 
@@ -129,7 +129,7 @@ Volume is assumed to be low to moderate rather than high-throughput or public fa
 
 ### 4.1 Communication decisions
 
-- Every action the client takes, like submitting, sending a message, cancelling, claiming, unclaiming, or changing status, goes through a normal synchronous call to the backend, since the person needs to know right away whether it worked.
+- Every action the client takes, like submitting, editing details, sending a message, cancelling, claiming, unclaiming, or changing status, goes through a normal synchronous call to the backend, since the person needs to know right away whether it worked.
 
 - Live updates flow the other direction, from the backend to the client, over Server-Sent Events (SSE) rather than a fully two-way connection like WebSockets, pushing updates as they happen rather than the client repeatedly asking if anything changed. This fits the traffic pattern this system actually has: per-request live-update volume is expected to be very low, often zero, since many requests move from New to Resolved with a single status change and no messages at all. Updates only ever need to flow backend-to-client, never the other way, since every client action already goes through the normal synchronous calls above. SSE also gives reconnection handling for free, matching the reconnect-and-refetch behavior described in the failure scenarios below, without the added complexity a bidirectional protocol would bring for traffic this light.
 
