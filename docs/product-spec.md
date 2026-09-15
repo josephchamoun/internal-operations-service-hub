@@ -348,7 +348,10 @@ Given a message is sent by one side, when it is saved, then the other side (requ
 Given the Admin-defined list of priority levels, when an employee submits a request, then they may pick one from that list, and if they leave it unset, it defaults to "Normal."
 
 **Priority changeable by any team member**
-Given a submitted request, when any member of the owning team (claimed or not) changes its priority, then the change is accepted and the request's escalation window updates to match the new priority level's default.
+Given a submitted request, when any member of the owning team (claimed or not) changes its priority to a different level from the current one, then the change is accepted and the request's escalation window updates to match the new priority level's default.
+
+**Same priority is rejected**
+Given a request already at a priority level, when a team member submits that same priority again, then the change is rejected and the request is left unchanged.
 
 **Escalation window follows priority level**
 Given a request's priority level, when its escalation window is calculated, then it uses that priority level's Admin-defined default window.
