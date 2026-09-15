@@ -26,7 +26,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Login and authentication.** The hub's own login screen. It does not store passwords itself; it hands identity verification off to the company's existing identity provider.
 
-**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. Light per-person rate limiting on submissions is a later production-hardening step, not something this phase implements; accidental duplicate submits are left to the client and to ordinary request validation for now. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
+**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
 
 **Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone other than the requester — the owning team or the Admin — opens a request's full details, recording who and when. The requester's own views are not logged. This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
 
@@ -135,7 +135,7 @@ Volume is assumed to be low to moderate rather than high-throughput or public fa
 
 - Sending a notification out to the external channel happens asynchronously and separately from saving the request, specifically so a slow or failed notification never delays or blocks the action the person is actually waiting on.
 
-- Submissions are not rate limited in this phase. A light per-person limit was considered to catch accidental duplicate submits, and is left as later production-hardening rather than something the current backend enforces.
+- Submissions are lightly rate limited per person inside the backend, mainly to catch accidental duplicate submissions if many people are using the system at the same time.
 
 ### 4.2 Major decisions and rationale
 
