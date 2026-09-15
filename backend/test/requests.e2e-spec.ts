@@ -62,6 +62,31 @@ describe('Requests lifecycle (e2e)', () => {
     createdRequestId = res.body.id;
   });
 
+  it('allows the requester to edit a New unclaimed request', async () => {
+    const res = await request(app.getHttpServer())
+      .patch(`/requests/${createdRequestId}/details`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({
+        subject: 'E2E test request (edited)',
+        description: 'Updated by an automated e2e test.',
+      })
+      .expect(200);
+
+    expect(res.body.subject).toBe('E2E test request (edited)');
+    expect(res.body.description).toBe('Updated by an automated e2e test.');
+  });
+
+  it('denies an edit from an actor who is not the requester', async () => {
+    await request(app.getHttpServer())
+      .patch(`/requests/${createdRequestId}/details`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        subject: 'Should not apply',
+        description: 'Should not apply',
+      })
+      .expect(403);
+  });
+
   it('denies claim from an actor not on the owning team', async () => {
     await request(app.getHttpServer())
       .patch(`/requests/${createdRequestId}/claim`)
@@ -76,6 +101,17 @@ describe('Requests lifecycle (e2e)', () => {
       .expect(200);
 
     expect(res.body.claimedBy).toBe('dev-manager');
+  });
+
+  it('rejects an edit after the request has been claimed', async () => {
+    await request(app.getHttpServer())
+      .patch(`/requests/${createdRequestId}/details`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({
+        subject: 'Too late',
+        description: 'Too late',
+      })
+      .expect(400);
   });
 
   it('rejects requests with no auth token at all', async () => {

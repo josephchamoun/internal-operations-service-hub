@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { RequestStatus } from './enums/request-status.enum';
 
@@ -77,5 +77,109 @@ describe('RequestsService — claim authorization rule', () => {
 
     expect(result.claimedBy).toBe('dev-manager');
     expect(mockRepo.update).toHaveBeenCalledWith('req1', { claimedBy: 'dev-manager' });
+  });
+});
+
+describe('RequestsService — edit details rule', () => {
+  let service: RequestsService;
+  let mockRepo: any;
+
+  const newUnclaimed = {
+    id: 'req1',
+    requesterId: 'dev-employee',
+    owningTeamId: 'IT',
+    claimedBy: null,
+    status: RequestStatus.NEW,
+    subject: 'Old subject',
+    description: 'Old description',
+  };
+
+  beforeEach(() => {
+    mockRepo = {
+      findById: jest.fn().mockResolvedValue(newUnclaimed),
+      update: jest.fn(),
+    };
+
+    service = new RequestsService(
+      mockRepo,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { notifyTeam: jest.fn(), notifyUser: jest.fn() } as any,
+      { emit: jest.fn() } as any,
+    );
+  });
+
+  it('allows the requester to edit a New unclaimed request', async () => {
+    mockRepo.update.mockResolvedValue({
+      ...newUnclaimed,
+      subject: 'Updated subject',
+      description: 'Updated description',
+    });
+
+    const requester = { userId: 'dev-employee', role: 'employee', teamIds: [] };
+
+    const result = await service.updateDetails(
+      'req1',
+      { subject: 'Updated subject', description: 'Updated description' },
+      requester as any,
+    );
+
+    expect(result.subject).toBe('Updated subject');
+    expect(mockRepo.update).toHaveBeenCalledWith('req1', {
+      subject: 'Updated subject',
+      description: 'Updated description',
+    });
+  });
+
+  it('rejects an edit from someone who is not the requester', async () => {
+    const actorOnTeam = { userId: 'dev-manager', role: 'team_member', teamIds: ['IT'] };
+
+    await expect(
+      service.updateDetails(
+        'req1',
+        { subject: 'Updated subject', description: 'Updated description' },
+        actorOnTeam as any,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an edit once the request has been claimed', async () => {
+    mockRepo.findById.mockResolvedValue({
+      ...newUnclaimed,
+      claimedBy: 'dev-manager',
+    });
+
+    const requester = { userId: 'dev-employee', role: 'employee', teamIds: [] };
+
+    await expect(
+      service.updateDetails(
+        'req1',
+        { subject: 'Updated subject', description: 'Updated description' },
+        requester as any,
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an edit once the request has left New', async () => {
+    mockRepo.findById.mockResolvedValue({
+      ...newUnclaimed,
+      status: RequestStatus.IN_PROGRESS,
+    });
+
+    const requester = { userId: 'dev-employee', role: 'employee', teamIds: [] };
+
+    await expect(
+      service.updateDetails(
+        'req1',
+        { subject: 'Updated subject', description: 'Updated description' },
+        requester as any,
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
   });
 });

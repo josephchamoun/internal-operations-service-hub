@@ -4,6 +4,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
+import { UpdateRequestDetailsDto } from './dto/update-request-details.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { HubJwtPayload } from '../auth/auth.service';
@@ -29,8 +30,8 @@ export class RequestsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.requestsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
+    return this.requestsService.findOne(id, actor);
   }
 
   @Get(':id/full')
@@ -74,6 +75,15 @@ export class RequestsController {
   @Patch(':id/cancel')
   cancel(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
     return this.requestsService.cancel(id, actor);
+  }
+
+  @Patch(':id/details')
+  updateDetails(
+    @Param('id') id: string,
+    @Body() dto: UpdateRequestDetailsDto,
+    @CurrentUser() actor: HubJwtPayload,
+  ) {
+    return this.requestsService.updateDetails(id, dto, actor);
   }
 
   @Get(':id/access-logs')

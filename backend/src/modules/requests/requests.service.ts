@@ -20,20 +20,13 @@ import { RequestEventEntity } from '../request-events/entities/request-event.ent
 import { TeamsService } from '../teams/teams.service';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
+import { UpdateRequestDetailsDto } from './dto/update-request-details.dto';
 import { HubJwtPayload } from '../auth/auth.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { LiveUpdatesService } from '../live-updates/live-updates.service';
 
 const TERMINAL_STATUSES: RequestStatus[] = [RequestStatus.RESOLVED, RequestStatus.CANCELLED];
 const OTHER_CATEGORY_ID = 'other';
-
-export interface LimitedRequestView {
-  id: string;
-  categoryId: string;
-  requesterId: string;
-  createdAt: string;
-  subject: string;
-}
 
 @Injectable()
 export class RequestsService {
@@ -68,47 +61,25 @@ export class RequestsService {
     return this.repo.findAll().then((all) => all.filter((r) => r.requesterId === actor.userId));
   }
 
-  async findOne(id: string): Promise<RequestSummary> {
+  async findOne(id: string, actor: HubJwtPayload): Promise<RequestSummary> {
     const request = await this.requireRequest(id);
+    this.assertCanView(request, actor);
     const { description, ...summary } = request;
     return summary;
   }
 
-  async findFullDetails(
-    id: string,
-    actor: HubJwtPayload,
-  ): Promise<RequestEntity | LimitedRequestView> {
+  async findFullDetails(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
     const request = await this.requireRequest(id);
-
-    const isRequester = request.requesterId === actor.userId;
-    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
-
-    if (isRequester || isOwningTeamMember) {
-      return request;
+    this.assertCanView(request, actor);
+    if (request.requesterId !== actor.userId) {
+      await this.accessLogsService.record(actor.userId, request.id);
     }
-
-    await this.accessLogsService.record(actor.userId, request.id);
-
-    return {
-      id: request.id,
-      categoryId: request.categoryId,
-      requesterId: request.requesterId,
-      createdAt: request.createdAt,
-      subject: request.subject,
-    };
+    return request;
   }
 
   async findEvents(id: string, actor: HubJwtPayload): Promise<RequestEventEntity[]> {
     const request = await this.requireRequest(id);
-
-    const isRequester = request.requesterId === actor.userId;
-    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
-    const isAdmin = actor.role === 'admin';
-
-    if (!isRequester && !isOwningTeamMember && !isAdmin) {
-      throw new ForbiddenException('You do not have access to this request\'s events');
-    }
-
+    this.assertCanView(request, actor);
     return this.requestEventsService.findByRequestId(id);
   }
 
@@ -154,6 +125,35 @@ export class RequestsService {
     );
 
     return created;
+  }
+
+  async updateDetails(
+    id: string,
+    dto: UpdateRequestDetailsDto,
+    actor: HubJwtPayload,
+  ): Promise<RequestEntity> {
+    const request = await this.requireRequest(id);
+
+    if (request.requesterId !== actor.userId) {
+      throw new ForbiddenException('Only the requester can edit this request');
+    }
+
+    if (request.status !== RequestStatus.NEW) {
+      throw new BadRequestException(
+        `Request ${id} is ${request.status} and can no longer be edited`,
+      );
+    }
+
+    if (request.claimedBy) {
+      throw new BadRequestException(
+        `Request ${id} has been claimed and can no longer be edited`,
+      );
+    }
+
+    return (await this.repo.update(id, {
+      subject: dto.subject,
+      description: dto.description,
+    })) as RequestEntity;
   }
 
   async claim(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
@@ -397,6 +397,15 @@ export class RequestsService {
       throw new BadRequestException(
         `Request ${request.id} is ${request.status} and can no longer be ${action}`,
       );
+    }
+  }
+
+  private assertCanView(request: RequestEntity, actor: HubJwtPayload): void {
+    const isRequester = request.requesterId === actor.userId;
+    const isOwningTeamMember = actor.teamIds.includes(request.owningTeamId);
+    const isAdmin = actor.role === 'admin';
+    if (!isRequester && !isOwningTeamMember && !isAdmin) {
+      throw new ForbiddenException('You do not have access to this request');
     }
   }
 }
