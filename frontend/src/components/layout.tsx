@@ -11,6 +11,9 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <header>
         <Link to={hasQueue ? "/queue" : "/mine"} className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            OH
+          </span>
           Ops Hub
         </Link>
         <nav>
@@ -20,8 +23,9 @@ export function Layout({ children }: { children: ReactNode }) {
           {admin && <NavLink to="/admin/users">Admin</NavLink>}
         </nav>
         <div className="identity">
-          <span>
-            {user?.userId} · {user?.role}
+          <span className="identity-chip">
+            <strong>{user?.userId}</strong>
+            <em>{user?.role?.replace("_", " ")}</em>
           </span>
           <Button className="quiet" onClick={() => logout()}>
             Log out

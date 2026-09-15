@@ -56,8 +56,8 @@ export function LimitedRequestPage() {
       <Card>
         <h2>Limited request view</h2>
         <p className="notice">
-          This view intentionally excludes the request description and sensitive
-          details.
+          Only category, subject, and routing are shown here so a misrouted
+          request can be recognized without opening sensitive details.
         </p>
         <dl>
           <dt>Category</dt>

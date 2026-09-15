@@ -16,8 +16,9 @@ export function ErrorState({
   if (status === 401)
     return (
       <Card>
+        <p className="eyebrow">Session</p>
         <h2>Session expired</h2>
-        <p>Please log in again to continue.</p>
+        <p className="muted">Please log in again to continue.</p>
         <Button
           onClick={() => logout("Your session expired. Please log in again.")}
         >
@@ -26,14 +27,15 @@ export function ErrorState({
       </Card>
     );
   return (
-    <Card className="error">
-      <h2>
-        {status === 403
-          ? "You don’t have permission for this"
-          : "Could not load this information"}
-      </h2>
-      <p>{message}</p>
-      {retry && <Button onClick={retry}>Try again</Button>}
-    </Card>
+      <Card className="error">
+        <p className="eyebrow">Something went wrong</p>
+        <h2>
+          {status === 403
+            ? "You don’t have permission for this"
+            : "Could not load this information"}
+        </h2>
+        <p className="muted">{message}</p>
+        {retry && <Button onClick={retry}>Try again</Button>}
+      </Card>
   );
 }

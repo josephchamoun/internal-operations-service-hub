@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
+import { Card } from "../components/card";
 
 // Landing page for REAL Microsoft Entra ID login only. Dev-login (the
 // picker on LoginPage) never navigates here — it calls login() directly.
@@ -22,13 +23,19 @@ export function AuthCallbackPage() {
       return;
     }
 
-    login(token);
-    navigate("/queue", { replace: true });
+    try {
+      login(token);
+      navigate("/", { replace: true });
+    } catch {
+      navigate("/login?microsoft=failed", { replace: true });
+    }
   }, [searchParams, login, navigate]);
 
   return (
-    <div className="login-page">
-      <p>Signing you in…</p>
+    <div className="login-callback">
+      <Card className="login-card">
+        <div className="loading">Signing you in…</div>
+      </Card>
     </div>
   );
 }

@@ -55,6 +55,10 @@ export function NewRequestPage() {
         <div>
           <div className="eyebrow">Intake</div>
           <h1>New request</h1>
+          <p className="page-description">
+            Pick a category so it lands with the right team. You can edit the
+            subject and description until someone claims it.
+          </p>
         </div>
       </div>
       <Card>

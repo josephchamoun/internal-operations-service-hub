@@ -116,7 +116,7 @@ export function FullRequestPage() {
       </div>
       <div className="detail-grid">
         <Card>
-          <h2>Full request view</h2>
+          <h2>Full request</h2>
           {isLimited ? (
             <p className="notice">
               Limited view — you are not on the owning team for this request.
@@ -331,6 +331,9 @@ export function FullRequestPage() {
                   </select>
                   <Button
                     className="secondary"
+                    disabled={
+                      (priorityId || request.priorityId) === request.priorityId
+                    }
                     onClick={() =>
                       action.mutate({
                         path: `/requests/${id}/priority`,

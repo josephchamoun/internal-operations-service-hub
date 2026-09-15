@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import type { CurrentUser } from "./types";
 
 type AuthState = {
@@ -16,8 +16,9 @@ function decodeToken(token: string): CurrentUser {
   const payload = token.split(".")[1];
   if (!payload) throw new Error("Invalid login token");
   const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
   const json = decodeURIComponent(
-    atob(normalized)
+    atob(padded)
       .split("")
       .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
       .join(""),
@@ -40,17 +41,17 @@ function restoreSession(): { token: string | null; user: CurrentUser | null } {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState(restoreSession);
   const [notice, setNotice] = useState<string | null>(null);
-  const login = (nextToken: string) => {
+  const login = useCallback((nextToken: string) => {
     const nextUser = decodeToken(nextToken);
     sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
     setSession({ token: nextToken, user: nextUser });
     setNotice(null);
-  };
-  const logout = (message?: string) => {
+  }, []);
+  const logout = useCallback((message?: string) => {
     sessionStorage.removeItem(TOKEN_STORAGE_KEY);
     setSession({ token: null, user: null });
     setNotice(message ?? null);
-  };
+  }, []);
   return (
     <AuthContext.Provider
       value={{

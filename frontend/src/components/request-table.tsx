@@ -28,7 +28,7 @@ export function RequestTable({
         <span>Created</span>
       </div>
       {requests.length === 0 ? (
-        <p className="muted">{empty}</p>
+        <p className="empty-state">{empty}</p>
       ) : (
         requests.map((request) => (
           <Link

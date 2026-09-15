@@ -26,6 +26,10 @@ export function AccessLogsPage() {
             ← Full request
           </Link>
           <h1>Request access logs</h1>
+          <p className="page-description">
+            Who opened the full details of this request, and when. Requester
+            views are not recorded.
+          </p>
         </div>
       </div>
       <Card>

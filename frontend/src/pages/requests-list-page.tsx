@@ -8,7 +8,7 @@ import { Card } from "../components/card";
 import { Loading } from "../components/loading";
 import { RequestTable } from "../components/request-table";
 import { ErrorState } from "../components/error-state";
-import type { RequestItem, RequestStatus, Team } from "../types";
+import type { Priority, RequestItem, RequestStatus, Team } from "../types";
 
 const statuses: RequestStatus[] = [
   "New",
@@ -24,8 +24,10 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
     mine ? "/requests/mine" : "/requests",
   );
   const teams = useApiQuery<Team[]>(["teams"], "/teams");
+  const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
   const [status, setStatus] = useState("");
   const [team, setTeam] = useState("");
+  const [priority, setPriority] = useState("");
   const [claimState, setClaimState] = useState("all");
   const canBeClaimant = (user?.teamIds?.length ?? 0) > 0;
   useEffect(() => {
@@ -39,19 +41,30 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
     };
     return () => stream.close();
   }, [token, client]);
-  if (query.isPending || teams.isPending) return <Loading />;
+  if (query.isPending || teams.isPending || priorities.isPending)
+    return <Loading />;
   if (query.isError)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
+  if (teams.isError)
+    return <ErrorState error={teams.error} retry={() => teams.refetch()} />;
+  if (priorities.isError)
+    return (
+      <ErrorState error={priorities.error} retry={() => priorities.refetch()} />
+    );
 
-  const shown = query.data.filter(
-    (r) =>
-      ((!status || r.status === status) &&
-        (!team || r.owningTeamId === team) &&
-        (!claimState || claimState === "all")) ||
+  const shown = query.data.filter((r) => {
+    const matchesStatus = !status || r.status === status;
+    const matchesTeam = !team || r.owningTeamId === team;
+    const matchesPriority = !priority || r.priorityId === priority;
+    const matchesClaim =
+      claimState === "all" ||
       (claimState === "unclaimed" && !r.claimedBy) ||
       (claimState === "mine" && r.claimedBy === user?.userId) ||
-      (claimState === "other" && !!r.claimedBy && r.claimedBy !== user?.userId),
-  );
+      (claimState === "other" &&
+        !!r.claimedBy &&
+        r.claimedBy !== user?.userId);
+    return matchesStatus && matchesTeam && matchesPriority && matchesClaim;
+  });
   return (
     <>
       <div className="page-heading">
@@ -64,6 +77,13 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
                 : "Team queue"}
           </div>
           <h1>{mine ? "My requests" : "Requests"}</h1>
+          <p className="page-description">
+            {mine
+              ? "Everything you submitted, with live status as the owning team works it."
+              : user?.role === "admin"
+                ? "Every request across teams. Open a row for the limited view first."
+                : "Requests routed to your team. Claim one to start work."}
+          </p>
         </div>
         <Link className="btn" to="/new">
           New request
@@ -77,6 +97,20 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
               <option value="">All statuses</option>
               {statuses.map((s) => (
                 <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Priority
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+            >
+              <option value="">All priorities</option>
+              {priorities.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
               ))}
             </select>
           </label>

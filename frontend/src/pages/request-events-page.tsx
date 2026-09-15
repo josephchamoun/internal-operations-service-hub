@@ -29,6 +29,10 @@ export function RequestEventsPage() {
             ← Request
           </Link>
           <h1>Request events</h1>
+          <p className="page-description">
+            Claims, status changes, reassignments, and other timeline entries
+            for this request.
+          </p>
         </div>
       </div>
       <Card>

@@ -25,6 +25,9 @@ export function AdminList({ type }: { type: AdminResource }) {
         <div>
           <div className="eyebrow">Administration</div>
           <h1>{type[0].toUpperCase() + type.slice(1)}</h1>
+          <p className="page-description">
+            Reference data for the hub. These pages are view-only.
+          </p>
         </div>
       </div>
       <div className="admin-tabs">
@@ -42,6 +45,7 @@ export function AdminList({ type }: { type: AdminResource }) {
       </div>
       <Card>
         <input
+          className="admin-search"
           aria-label={`Search ${type}`}
           placeholder={`Search ${type} by name`}
           value={search}
