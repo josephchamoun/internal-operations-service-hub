@@ -39,21 +39,33 @@ export class NotificationsService {
 
   /**
    * Fire-and-forget: a failed/slow send must never break the action that
-   * triggered it (architecture.md: "notification dispatcher fails... the
-   * request stays saved as normal; the notification is queued and retried").
-   * For this project's scope, "retried" is simplified to "logged and
-   * swallowed" rather than an actual retry queue.
+   * triggered it (architecture.md). A short in-process retry covers a
+   * transient Mailtrap/SMTP blip; after the last attempt we log and stop.
+   * There is no durable outbox — that belongs to a later production queue.
    */
   private async send(to: string, subject: string, body: string): Promise<void> {
-    try {
-      await this.transporter.sendMail({
-        from: this.fromEmail,
-        to,
-        subject,
-        text: body,
-      });
-    } catch (err) {
-      this.logger.error(`Failed to send notification to ${to}: ${err}`);
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.transporter.sendMail({
+          from: this.fromEmail,
+          to,
+          subject,
+          text: body,
+        });
+        return;
+      } catch (err) {
+        if (attempt === maxAttempts) {
+          this.logger.error(
+            `Failed to send notification to ${to} after ${maxAttempts} attempts: ${err}`,
+          );
+          return;
+        }
+        this.logger.warn(
+          `Notification to ${to} failed (attempt ${attempt}/${maxAttempts}); retrying`,
+        );
+        await this.delay(400 * attempt);
+      }
     }
   }
 

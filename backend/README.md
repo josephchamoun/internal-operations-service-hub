@@ -159,7 +159,7 @@ The actor for every request below is whoever the `Authorization: Bearer <token>`
 | PATCH  | `/requests/:id/status`   | `{ status }`                                                 | Actor must be the current claimant. `status` is `"In Progress"` or `"Resolved"`.                                                                                                                                               |
 | PATCH  | `/requests/:id/cancel`   | —                                                            | Actor must be the requester. Only from `New` or `In Progress`.                                                                                                                                                                 |
 | PATCH  | `/requests/:id/reassign` | `{ newTeamId, categoryId? }`                                 | Actor must be a member of the current owning team. Target team must exist and differ from the current one; clears any claim.                                                                                                   |
-| PATCH  | `/requests/:id/priority` | `{ priorityId }`                                             | Actor must be a member of the owning team (claimant not required).                                                                                                                                                             |
+| PATCH  | `/requests/:id/priority` | `{ priorityId }`                                             | Actor must be a member of the owning team (claimant not required). `400` if the new priority is the same as the current one.                                                                                                   |
 
 ### Global rule
 
@@ -189,7 +189,7 @@ All errors follow Nest's standard shape:
 
 | Status | When it happens                                                                                                                                                                                                          |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 400    | A required field is missing/invalid, an unexpected extra field was sent, or a lifecycle rule was violated (category has no default team, request already terminal, not currently claimed, editing after claim or after leaving New, reassigning to the same team). |
+| 400    | A required field is missing/invalid, an unexpected extra field was sent, or a lifecycle rule was violated (category has no default team, request already terminal, not currently claimed, editing after claim or after leaving New, reassigning to the same team, changing priority to the same value). |
 | 401    | No valid `Authorization: Bearer <token>` header.                                                                                                                                                                         |
 | 403    | Authenticated, but this actor isn't allowed to do this specific thing to this specific request (see the rule table above).                                                                                               |
 | 404    | A referenced entity does not exist: user, category, priority, team, or request.                                                                                                                                          |

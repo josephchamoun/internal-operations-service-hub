@@ -364,6 +364,10 @@ export class RequestsService {
 
     await this.prioritiesService.findOne(dto.priorityId);
 
+    if (dto.priorityId === request.priorityId) {
+      throw new BadRequestException('Request already has this priority');
+    }
+
     const previousPriorityId = request.priorityId;
     const updated = (await this.repo.update(id, { priorityId: dto.priorityId })) as RequestEntity;
 

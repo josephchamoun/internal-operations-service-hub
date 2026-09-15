@@ -12,6 +12,12 @@ export class AuthController {
 
   @Get('login')
   async login(@Res() res: Response) {
+    if (!this.authService.isMicrosoftLoginConfigured()) {
+      const frontendUrl = (
+        this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
+      ).replace(/\/$/, '');
+      return res.redirect(`${frontendUrl}/login?microsoft=unavailable`);
+    }
     const url = await this.authService.getAuthUrl();
     return res.redirect(url);
   }
@@ -19,10 +25,14 @@ export class AuthController {
   @Get('callback')
   async callback(@Query('code') code: string, @Res() res: Response) {
     const { accessToken } = await this.authService.handleCallback(code);
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const frontendUrl = (
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
+    ).replace(/\/$/, '');
     // Real Microsoft login hands the token to the frontend via a redirect,
     // since the browser is the one that needs to end up holding it.
-    return res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
+    return res.redirect(
+      `${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}`,
+    );
   }
 
   // ── TEST-ONLY LOGIN — safe to delete this whole method before any real

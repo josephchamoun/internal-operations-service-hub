@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
@@ -15,50 +20,58 @@ export interface HubJwtPayload {
 
 @Injectable()
 export class AuthService {
-  private readonly msalClient: ConfidentialClientApplication;
-  private readonly redirectUri: string;
+  private readonly msalClient: ConfidentialClientApplication | null;
+  private readonly redirectUri: string | null;
 
   constructor(
-  private readonly configService: ConfigService,
-  private readonly usersService: UsersService,
-  private readonly teamMembershipsService: TeamMembershipsService,
-  private readonly jwtService: JwtService,
-) {
-  const clientId = this.configService.get<string>('AZURE_AD_CLIENT_ID');
-  const tenantId = this.configService.get<string>('AZURE_AD_TENANT_ID');
-  const clientSecret = this.configService.get<string>('AZURE_AD_CLIENT_SECRET');
-  const redirectUri = this.configService.get<string>('AZURE_AD_REDIRECT_URI');
+    private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly teamMembershipsService: TeamMembershipsService,
+    private readonly jwtService: JwtService,
+  ) {
+    const clientId = this.configService.get<string>('AZURE_AD_CLIENT_ID')?.trim();
+    const tenantId = this.configService.get<string>('AZURE_AD_TENANT_ID')?.trim();
+    const clientSecret = this.configService.get<string>('AZURE_AD_CLIENT_SECRET')?.trim();
+    const redirectUri = this.configService.get<string>('AZURE_AD_REDIRECT_URI')?.trim();
 
-  if (!clientId || !tenantId || !clientSecret || !redirectUri) {
-    throw new InternalServerErrorException(
-      'Missing Azure AD configuration — check AZURE_AD_CLIENT_ID, AZURE_AD_TENANT_ID, AZURE_AD_CLIENT_SECRET, AZURE_AD_REDIRECT_URI in .env',
-    );
+    // Entra ID is optional. Testers can boot the app with only JWT + DATABASE_URL
+    // and use POST /auth/dev-login. Real Microsoft login is wired only when all
+    // four AZURE_AD_* values are present.
+    if (!clientId || !tenantId || !clientSecret || !redirectUri) {
+      this.msalClient = null;
+      this.redirectUri = null;
+      return;
+    }
+
+    this.redirectUri = redirectUri;
+    const msalConfig: Configuration = {
+      auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        clientSecret,
+      },
+    };
+    this.msalClient = new ConfidentialClientApplication(msalConfig);
   }
 
-  this.redirectUri = redirectUri;
+  isMicrosoftLoginConfigured(): boolean {
+    return this.msalClient !== null && this.redirectUri !== null;
+  }
 
-  const msalConfig: Configuration = {
-    auth: {
-      clientId,
-      authority: `https://login.microsoftonline.com/${tenantId}`,
-      clientSecret,
-    },
-  };
-
-  this.msalClient = new ConfidentialClientApplication(msalConfig);
-}
   async getAuthUrl(): Promise<string> {
-    return this.msalClient.getAuthCodeUrl({
+    const { msalClient, redirectUri } = this.requireEntra();
+    return msalClient.getAuthCodeUrl({
       scopes: SCOPES,
-      redirectUri: this.redirectUri,
+      redirectUri,
     });
   }
 
   async handleCallback(code: string): Promise<{ accessToken: string }> {
-    const result = await this.msalClient.acquireTokenByCode({
+    const { msalClient, redirectUri } = this.requireEntra();
+    const result = await msalClient.acquireTokenByCode({
       code,
       scopes: SCOPES,
-      redirectUri: this.redirectUri,
+      redirectUri,
     });
 
     const idTokenClaims = result.idTokenClaims as {
@@ -88,6 +101,18 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
     return { accessToken };
+  }
+
+  private requireEntra(): {
+    msalClient: ConfidentialClientApplication;
+    redirectUri: string;
+  } {
+    if (!this.msalClient || !this.redirectUri) {
+      throw new ServiceUnavailableException(
+        'Microsoft login is not configured. Use the test identity picker, or set AZURE_AD_CLIENT_ID, AZURE_AD_TENANT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_REDIRECT_URI in .env.',
+      );
+    }
+    return { msalClient: this.msalClient, redirectUri: this.redirectUri };
   }
 
   private async resolveUser(oid: string, email: string) {
