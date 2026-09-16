@@ -31,14 +31,16 @@ export function FullRequestPage() {
   const isOwningTeamPreview = !!user?.teamIds.includes(
     preview.data?.owningTeamId ?? "",
   );
+  const isAdminPreview = user?.role === "admin";
   const needsMisrouteWarning =
-    !!preview.data &&
-    !isRequesterPreview &&
-    (isOwningTeamPreview || user?.role === "admin");
+    !!preview.data && !isRequesterPreview && isOwningTeamPreview && !isAdminPreview;
+  const needsAccessLogWarning =
+    !!preview.data && !isRequesterPreview && isAdminPreview;
+  const needsConfirmBeforeFull = needsMisrouteWarning || needsAccessLogWarning;
   const detail = useApiQuery<RequestItem>(
     ["full-request", id],
     `/requests/${id}/full`,
-    !!preview.data && (!needsMisrouteWarning || acknowledgedFullView),
+    !!preview.data && (!needsConfirmBeforeFull || acknowledgedFullView),
   );
   const teams = useApiQuery<Team[]>(["teams"], "/teams");
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
@@ -93,7 +95,7 @@ export function FullRequestPage() {
     return <Loading />;
   if (preview.isError)
     return <ErrorState error={preview.error} retry={() => preview.refetch()} />;
-  if (needsMisrouteWarning && !acknowledgedFullView) {
+  if (needsConfirmBeforeFull && !acknowledgedFullView) {
     const request = preview.data;
     return (
       <>
@@ -107,36 +109,65 @@ export function FullRequestPage() {
         </div>
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <Card className="modal-card">
-            <p className="eyebrow">Before you open this</p>
-            <h2>Check that this request is for your team</h2>
-            <p>
-              Please read the request&apos;s subject and make sure this request
-              is really intended for your team. If it is not, reassign it to
-              the correct team — you do not need to open the full details
-              first.
-            </p>
-            <p className="notice warning">
-              Subject: <strong>{request.subject}</strong>
-            </p>
-            {isOwningTeamPreview && (
-              <ReassignForm
-                request={request}
-                teams={teams.data ?? []}
-                categories={categories.data ?? []}
-                token={token}
-              />
+            {needsAccessLogWarning ? (
+              <>
+                <p className="eyebrow">Before you open this</p>
+                <h2>This view is logged</h2>
+                <p>
+                  Opening the full details records who you are and when in the
+                  access log. Admins do not reassign requests; if it was sent
+                  to the wrong team, a member of the current owning team
+                  reassigns it from the limited view.
+                </p>
+                <p className="notice warning">
+                  Subject: <strong>{request.subject}</strong>
+                </p>
+                <div className="detail-links">
+                  <Button
+                    className="secondary"
+                    onClick={() => navigate(`/requests/${id}`)}
+                  >
+                    Go back
+                  </Button>
+                  <Button onClick={() => setAcknowledgedFullView(true)}>
+                    I understand — open full details
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="eyebrow">Before you open this</p>
+                <h2>Check that this request is for your team</h2>
+                <p>
+                  Please read the request&apos;s subject and make sure this
+                  request is really intended for your team. If it is not,
+                  reassign it to the correct team — you do not need to open
+                  the full details first.
+                </p>
+                <p className="notice warning">
+                  Subject: <strong>{request.subject}</strong>
+                </p>
+                {isOwningTeamPreview && (
+                  <ReassignForm
+                    request={request}
+                    teams={teams.data ?? []}
+                    categories={categories.data ?? []}
+                    token={token}
+                  />
+                )}
+                <div className="detail-links">
+                  <Button
+                    className="secondary"
+                    onClick={() => navigate(`/requests/${id}`)}
+                  >
+                    Go back
+                  </Button>
+                  <Button onClick={() => setAcknowledgedFullView(true)}>
+                    This is for my team — open full details
+                  </Button>
+                </div>
+              </>
             )}
-            <div className="detail-links">
-              <Button
-                className="secondary"
-                onClick={() => navigate(`/requests/${id}`)}
-              >
-                Go back
-              </Button>
-              <Button onClick={() => setAcknowledgedFullView(true)}>
-                This is for my team — open full details
-              </Button>
-            </div>
           </Card>
         </div>
       </>
