@@ -16,6 +16,7 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { ErrorState } from "../components/error-state";
 import { Loading } from "../components/loading";
+import { ReassignForm } from "../components/reassign-form";
 
 const statuses: RequestStatus[] = ["New", "In Progress", "Resolved"];
 
@@ -24,16 +25,25 @@ export function FullRequestPage() {
   const { token, user } = useAuth();
   const client = useQueryClient();
   const navigate = useNavigate();
+  const preview = useApiQuery<RequestItem>(["request", id], `/requests/${id}`);
+  const [acknowledgedFullView, setAcknowledgedFullView] = useState(false);
+  const isRequesterPreview = user?.userId === preview.data?.requesterId;
+  const isOwningTeamPreview = !!user?.teamIds.includes(
+    preview.data?.owningTeamId ?? "",
+  );
+  const needsMisrouteWarning =
+    !!preview.data &&
+    !isRequesterPreview &&
+    (isOwningTeamPreview || user?.role === "admin");
   const detail = useApiQuery<RequestItem>(
     ["full-request", id],
     `/requests/${id}/full`,
+    !!preview.data && (!needsMisrouteWarning || acknowledgedFullView),
   );
   const teams = useApiQuery<Team[]>(["teams"], "/teams");
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
   const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
   const [status, setStatus] = useState<RequestStatus>("In Progress");
-  const [teamId, setTeamId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
   const [priorityId, setPriorityId] = useState("");
   const [editing, setEditing] = useState(false);
   const [editSubject, setEditSubject] = useState("");
@@ -79,13 +89,60 @@ export function FullRequestPage() {
       }
     },
   });
-  if (
-    detail.isPending ||
-    teams.isPending ||
-    categories.isPending ||
-    priorities.isPending
-  )
+  if (preview.isPending || teams.isPending || categories.isPending)
     return <Loading />;
+  if (preview.isError)
+    return <ErrorState error={preview.error} retry={() => preview.refetch()} />;
+  if (needsMisrouteWarning && !acknowledgedFullView) {
+    const request = preview.data;
+    return (
+      <>
+        <div className="page-heading detail-title">
+          <div>
+            <Link to={`/requests/${id}`} className="back">
+              ← Limited view
+            </Link>
+            <h1>{request.subject}</h1>
+          </div>
+        </div>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <Card className="modal-card">
+            <p className="eyebrow">Before you open this</p>
+            <h2>Check that this request is for your team</h2>
+            <p>
+              Please read the request&apos;s subject and make sure this request
+              is really intended for your team. If it is not, reassign it to
+              the correct team — you do not need to open the full details
+              first.
+            </p>
+            <p className="notice warning">
+              Subject: <strong>{request.subject}</strong>
+            </p>
+            {isOwningTeamPreview && (
+              <ReassignForm
+                request={request}
+                teams={teams.data ?? []}
+                categories={categories.data ?? []}
+                token={token}
+              />
+            )}
+            <div className="detail-links">
+              <Button
+                className="secondary"
+                onClick={() => navigate(`/requests/${id}`)}
+              >
+                Go back
+              </Button>
+              <Button onClick={() => setAcknowledgedFullView(true)}>
+                This is for my team — open full details
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </>
+    );
+  }
+  if (detail.isPending || priorities.isPending) return <Loading />;
   if (detail.isError)
     return <ErrorState error={detail.error} retry={() => detail.refetch()} />;
   const request = detail.data;
@@ -274,48 +331,13 @@ export function FullRequestPage() {
                   Cancel request
                 </Button>
               )}
-              {isTeamMember && (
-                <div className="action-group stacked">
-                  <strong>Reassign</strong>
-                  <select
-                    value={teamId}
-                    onChange={(event) => setTeamId(event.target.value)}
-                  >
-                    <option value="">Select target team</option>
-                    {teams.data
-                      ?.filter((team) => team.id !== request.owningTeamId)
-                      .map((team) => (
-                        <option value={team.id} key={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                  </select>
-                  <select
-                    value={categoryId}
-                    onChange={(event) => setCategoryId(event.target.value)}
-                  >
-                    <option value="">Category (optional)</option>
-                    {categories.data?.map((category) => (
-                      <option value={category.id} key={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    disabled={!teamId}
-                    onClick={() =>
-                      action.mutate({
-                        path: `/requests/${id}/reassign`,
-                        body: {
-                          newTeamId: teamId,
-                          ...(categoryId ? { categoryId } : {}),
-                        },
-                      })
-                    }
-                  >
-                    Reassign
-                  </Button>
-                </div>
+              {isTeamMember && teams.data && categories.data && (
+                <ReassignForm
+                  request={request}
+                  teams={teams.data}
+                  categories={categories.data}
+                  token={token}
+                />
               )}
               {isTeamMember && (
                 <div className="action-group">
