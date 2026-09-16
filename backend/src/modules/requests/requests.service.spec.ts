@@ -80,6 +80,94 @@ describe('RequestsService — claim authorization rule', () => {
   });
 });
 
+describe('RequestsService — unclaim returns the request to New', () => {
+  let service: RequestsService;
+  let mockRepo: any;
+  let mockRequestEventsService: any;
+  let mockNotificationsService: any;
+  let mockLiveUpdatesService: any;
+
+  const claimant = { userId: 'dev-manager', role: 'team_member', teamIds: ['IT'] };
+
+  beforeEach(() => {
+    mockRepo = { findById: jest.fn(), update: jest.fn() };
+    mockRequestEventsService = { append: jest.fn() };
+    mockNotificationsService = { notifyTeam: jest.fn(), notifyUser: jest.fn() };
+    mockLiveUpdatesService = { emit: jest.fn() };
+    service = new RequestsService(
+      mockRepo,
+      {} as any,
+      {} as any,
+      {} as any,
+      mockRequestEventsService,
+      {} as any,
+      mockNotificationsService,
+      mockLiveUpdatesService,
+    );
+  });
+
+  it('clears the claim and sets status back to New when it was In Progress', async () => {
+    mockRepo.findById.mockResolvedValue({
+      id: 'req1',
+      owningTeamId: 'IT',
+      requesterId: 'dev-employee',
+      claimedBy: 'dev-manager',
+      status: RequestStatus.IN_PROGRESS,
+      subject: 'Laptop',
+    });
+    mockRepo.update.mockResolvedValue({
+      id: 'req1',
+      owningTeamId: 'IT',
+      requesterId: 'dev-employee',
+      claimedBy: null,
+      status: RequestStatus.NEW,
+      subject: 'Laptop',
+    });
+
+    const result = await service.unclaim('req1', claimant as any);
+
+    expect(result.status).toBe(RequestStatus.NEW);
+    expect(result.claimedBy).toBeNull();
+    expect(mockRepo.update).toHaveBeenCalledWith('req1', {
+      claimedBy: null,
+      status: RequestStatus.NEW,
+    });
+    expect(mockRequestEventsService.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'status_change',
+        fromValue: RequestStatus.IN_PROGRESS,
+        toValue: RequestStatus.NEW,
+      }),
+    );
+  });
+
+  it('does not write a status event when the request was already New', async () => {
+    mockRepo.findById.mockResolvedValue({
+      id: 'req1',
+      owningTeamId: 'IT',
+      requesterId: 'dev-employee',
+      claimedBy: 'dev-manager',
+      status: RequestStatus.NEW,
+      subject: 'Laptop',
+    });
+    mockRepo.update.mockResolvedValue({
+      id: 'req1',
+      owningTeamId: 'IT',
+      requesterId: 'dev-employee',
+      claimedBy: null,
+      status: RequestStatus.NEW,
+      subject: 'Laptop',
+    });
+
+    await service.unclaim('req1', claimant as any);
+
+    expect(mockRepo.update).toHaveBeenCalledWith('req1', { claimedBy: null });
+    expect(mockRequestEventsService.append).not.toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'status_change' }),
+    );
+  });
+});
+
 describe('RequestsService — edit details rule', () => {
   let service: RequestsService;
   let mockRepo: any;

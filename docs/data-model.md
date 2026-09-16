@@ -155,11 +155,11 @@ A request starts in the New status. From there, the owning team can move it into
 
 ### 2.2 Claim invariant
 
-At most one claimed_by value exists per request at any time. While claimed, only the claimant may change status, though the rest of the owning team retains read access and can see who holds the claim. Unclaiming clears claimed_by and re-triggers the same notification as a new request landing. Claiming itself writes a claimed event but does not notify anyone, since the queue view already reflects it live.
+At most one claimed_by value exists per request at any time. While claimed, only the claimant may change status, though the rest of the owning team retains read access and can see who holds the claim. Unclaiming clears claimed_by and, if the status was In Progress, sets it back to New so the request lands in the queue the same way a newly submitted one does. That status revert is recorded as a status_change event. Unclaiming also re-triggers the same team notification as a new request landing. Claiming itself writes a claimed event but does not notify anyone, since the queue view already reflects it live.
 
 ### 2.3 Reassignment
 
-Any member of the current owning team can reassign a request to a different team. This updates owning_team_id, clears claimed_by so the previous claim does not carry over to the new team, and writes a reassigned event recording the old and new team, without touching status or any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
+Any member of the current owning team can reassign a request to a different team. This updates owning_team_id, clears claimed_by so the previous claim does not carry over to the new team, and sets status back to New if it had been In Progress, so the new team receives it as an unclaimed New request. It writes a reassigned event recording the old and new team, plus a status_change event when status was reverted, without touching any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
 
 ### 2.4 Escalation
 

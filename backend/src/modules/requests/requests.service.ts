@@ -197,7 +197,13 @@ export class RequestsService {
     }
 
     const previousClaimant = request.claimedBy;
-    const updated = (await this.repo.update(id, { claimedBy: null })) as RequestEntity;
+    const previousStatus = request.status;
+    const updated = (await this.repo.update(id, {
+      claimedBy: null,
+      ...(previousStatus !== RequestStatus.NEW
+        ? { status: RequestStatus.NEW }
+        : {}),
+    })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
       eventType: RequestEventType.UNCLAIMED,
@@ -207,6 +213,7 @@ export class RequestsService {
     });
 
     this.liveUpdatesService.emit(id, updated.owningTeamId, updated.requesterId, 'unclaimed', { previousClaimant });
+    await this.recordReturnToNew(updated, actor, previousStatus);
 
     void this.notificationsService.notifyTeam(
       updated.owningTeamId,
@@ -315,10 +322,14 @@ export class RequestsService {
       newCategoryId = OTHER_CATEGORY_ID;
     }
 
+    const previousStatus = request.status;
     const updated = (await this.repo.update(id, {
       owningTeamId: dto.newTeamId,
       claimedBy: null,
       categoryId: newCategoryId,
+      ...(previousStatus !== RequestStatus.NEW
+        ? { status: RequestStatus.NEW }
+        : {}),
     })) as RequestEntity;
 
     await this.requestEventsService.append({
@@ -338,6 +349,8 @@ export class RequestsService {
         toValue: newCategoryId,
       });
     }
+
+    await this.recordReturnToNew(updated, actor, previousStatus);
 
     void this.notificationsService.notifyTeam(
       updated.owningTeamId,
@@ -394,6 +407,34 @@ export class RequestsService {
     const found = await this.repo.findById(id);
     if (!found) throw new NotFoundException(`Request ${id} not found`);
     return found;
+  }
+
+  private async recordReturnToNew(
+    request: RequestEntity,
+    actor: HubJwtPayload,
+    previousStatus: RequestStatus,
+  ): Promise<void> {
+    if (previousStatus === RequestStatus.NEW) return;
+
+    await this.requestEventsService.append({
+      requestId: request.id,
+      eventType: RequestEventType.STATUS_CHANGE,
+      actorId: actor.userId,
+      fromValue: previousStatus,
+      toValue: RequestStatus.NEW,
+    });
+    this.liveUpdatesService.emit(
+      request.id,
+      request.owningTeamId,
+      request.requesterId,
+      'status_changed',
+      { status: RequestStatus.NEW },
+    );
+    void this.notificationsService.notifyUser(
+      request.requesterId,
+      `Your request status changed: ${request.subject}`,
+      `Your request is now: ${RequestStatus.NEW}\n\nSubject: ${request.subject}`,
+    );
   }
 
   private assertNotTerminal(request: RequestEntity, action: string): void {

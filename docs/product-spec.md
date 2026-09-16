@@ -181,10 +181,10 @@ Given a request is claimed, when the claimant marks it "Resolved," "In Progress,
 Given a request in any status, when the requester attempts to set it to "Resolved," then the system rejects the change (requesters may only cancel, never resolve, their own request).
 
 **Unclaiming reopens the request to the team**
-Given a claimed request, when the claimant unclaims it, then it returns to the shared queue as unclaimed and available for anyone on the team to claim, and the whole team is notified as if it were newly arrived.
+Given a claimed request, when the claimant unclaims it, then it returns to the shared queue as unclaimed with status "New" (including if it had been "In Progress") and available for anyone on the team to claim, and the whole team is notified as if it were newly arrived.
 
 **Reassignment clears the claim**
-Given a claimed request, when it is reassigned to a different team, then it becomes unclaimed in the new team's queue (the previous claim does not carry over).
+Given a claimed request, when it is reassigned to a different team, then it becomes unclaimed in the new team's queue with status "New" (the previous claim does not carry over, and "In Progress" does not carry over either).
 
 **Claim status visible to the rest of the team**
 Given a claimed request, when other team members view the shared queue, then they see it marked as claimed and by whom, even though they cannot claim it themselves.
