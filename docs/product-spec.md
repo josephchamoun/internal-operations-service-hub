@@ -69,6 +69,7 @@ The system must:
 26. The Admin defines a fixed list of priority levels (e.g. Low, Normal, Urgent), each with its own default escalation window. The requester picks one from that list at submission (defaulting to Normal if left unset); any member of the owning team can change it after seeing the request, not only whoever has claimed it, since correcting an over-marked priority is often most useful right when the request lands, before anyone's claimed it yet. This follows the same pattern as category selection: a fixed, Admin-maintained list rather than free text.
 27. The escalation scheduler's check frequency and the actual reminder frequency are independent. The scheduler may check for stale requests often (e.g. every couple of hours) without reminding the team that often; a reminder for a given request only goes out once the priority level's escalation window has elapsed since the last reminder for that request.
 28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
+29. Before a request is saved, the requester may paste free text and ask the hub for an advisory intake suggestion. The backend sends only that draft plus the Admin-defined category, team, and priority lists to a language model. The model returns structured JSON. The backend validates every product-owned value against those lists and builds the response the requester sees (summary, request type, category, priority, owning team, suggested next step, optional self-serve hint, clarification if the text is thin or ambiguous). The suggestion never creates the request. The requester can edit or ignore it and still submit through the existing form. If the provider is down or returns unreadable output, submission still works without the suggestion.
 
 ## 5. Non-Functional Requirements
 
@@ -298,6 +299,15 @@ Given a user belongs to multiple teams, when they claim an unclaimed request rou
 
 **A request's owning team stays singular regardless of user memberships**
 Given a user who belongs to multiple teams submits or reassigns a request, when the request is routed, then it is still assigned to exactly one owning team. User membership count never causes a request to be split or co-owned.
+
+**Suggested next step before submit**
+Given an employee pastes a free-text draft and asks for a suggestion, when the backend returns a structured candidate, then it includes a summary, a category from the Admin list, a request type of IT/HR/unknown, a priority from the Admin list, a suggested next step, and does not create a request until the employee submits the normal form.
+
+**Thin drafts ask for clarification**
+Given a draft of only a few words, when a suggestion is returned, then `needsClarification` is true and confidence is not high.
+
+**Invented categories are not trusted**
+Given the model returns a category or team id that is not in the hub's lists, when the backend builds the response, then that id is discarded and replaced with a value the product owns (`other` / no team / Normal).
 
 ---
 

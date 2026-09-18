@@ -183,6 +183,10 @@ A requester may read and write only requests where they are the requester. Subje
 
 A request routed to the wrong team never exposes its description or attachments to the receiving team by default. Only the category, requester, created at, and subject are shown. Opening the full detail anyway is permitted but logged, not blocked, per the authorization boundaries and access log above.
 
+### 2.8 Intake suggestion
+
+The pre-submit AI suggestion is not stored. It is rebuilt each time from the current draft plus the live category, team, and priority rows. Saving it would duplicate data the request already holds after submit, and the suggestion is advisory only until the employee confirms.
+
 ---
 
 ## 3. Access

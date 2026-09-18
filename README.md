@@ -2,7 +2,9 @@
 
 A single, trackable entry point for internal employee requests, starting with IT and HR. Employees submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox. This replaces those informal channels with one system of record.
 
-## Status: v0.3, Integrated Product Slice (real DB, real auth, React frontend)
+## Status: v0.4, AI-assisted request intake (same repo)
+
+The Week 3 request flow is still the product. v0.4 adds one advisory step **before submit**: the employee pastes free text, the backend asks Groq for a structured suggestion (summary, IT/HR type, category, next step), validates it against Admin-defined lists, and the employee confirms. See `docs/week4-production-ai.md`. A Groq API key is optional; without it, the ordinary form still works.
 
 The full Service Request flow — submit, land in the owning team's queue, claim, work, change status, resolve/reassign/cancel — now runs end to end through a real React frontend, a NestJS backend, and a real SQLite database (via Prisma), behind authentication (Microsoft Entra ID, plus a test-only `dev-login` path) and per-action authorization. Email notifications (via Mailtrap's sandbox) and live in-page updates (SSE) are also wired up. See `docs/week3-full-stack-delivery.md` for the full write-up, including exactly which assignment requirements are met and where.
 
@@ -16,7 +18,8 @@ Read the docs in this order, each one builds on the last:
 2. `docs/architecture.md`, how the system is structured to meet that spec, its components, data flows, failure handling, and the reasoning behind the major design choices.
 3. `docs/data-model.md`, what the system actually stores, how the pieces relate to each other, and how the real queries get answered.
 4. `docs/decisions/ADR-001.md`, a deeper look at one specific decision, why the data lives in a relational database rather than a document store.
-5. `docs/week3-full-stack-delivery.md`, the current (v0.3) delivery: the two authentication paths, every authorization rule, the invalid-request and expected-failure cases, notifications, live updates, and the full setup/run/test instructions.
+5. `docs/week3-full-stack-delivery.md`, the v0.3 delivery: auth, authorization, notifications, live updates, setup/run/test.
+6. `docs/week4-production-ai.md`, the v0.4 intake suggestion: what is sent to the model, the structured result, eval cases, and `npm run test:ai-eval`.
 
 ## Install, run, and test this from scratch
 
@@ -34,7 +37,7 @@ cd frontend && npm install && npm run dev   # separate terminal
 
 **Exercising the flow:** open the frontend, log in via the test-identity picker as an employee, submit a request, then log in as a team member on the owning team to claim and work it — see `docs/week3-full-stack-delivery.md` for the full walkthrough, including how to see the authorization denial in action.
 
-**Running the tests** (`cd backend && npm run test && npm run test:e2e`) — what each one covers is explained in `docs/week3-full-stack-delivery.md`.
+**Running the tests** (`cd backend && npm run test && npm run test:e2e && npm run test:ai-eval`) — Week 3 coverage is in `docs/week3-full-stack-delivery.md`; the AI intake evals are in `docs/week4-production-ai.md`.
 
 ## What's done
 

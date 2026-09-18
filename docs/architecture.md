@@ -26,7 +26,9 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Login and authentication.** The hub's own login screen. It does not store passwords itself; it hands identity verification off to the company's existing identity provider.
 
-**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
+**Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, asking for an intake suggestion, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies light rate limiting on submissions specifically, mainly to catch accidental duplicate submits when many people are using the system at once. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
+
+**Intake suggestion (advisory).** A narrow helper used only before a request exists. The backend sends the employee's free-text draft plus the current category, team, and priority lists to an external language model, then rebuilds a structured suggestion the employee can accept, edit, or ignore. The model never writes a request row. Product-owned values (category, team, priority) are checked against the database after the model replies.
 
 **Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone other than the requester — the owning team or the Admin — opens a request's full details, recording who and when. The requester's own views are not logged. This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
 
@@ -40,11 +42,13 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **External notification channel.** Whichever tool employees already use day to day, such as email or a chat platform, still undecided. The hub hands notifications off to it. If it's unreachable or rejects a message, the request itself is unaffected. Only the notification is queued and retried.
 
-No other outside systems are involved. There's no courier, payment processor, or equipment-tracking tool connected to this hub.
+**Language-model provider (optional).** Used only for the pre-submit intake suggestion. Today that is Groq's free chat API. If it is unreachable, slow, or returns unreadable output, the employee still submits by filling the form themselves. No other request-lifecycle action depends on it.
+
+No courier, payment processor, or equipment-tracking tool is connected to this hub.
 
 ### 2.3 Important data flows
 
-- An employee logs in, which the login screen verifies against the identity provider, then submits a request through the client, picking a category from the Admin-defined list, or "Other" with a team picked directly if none fit. That request goes straight to the backend, which validates it, saves it to the database with its status set to New, routes it to the right team based on the category chosen, and tells the notification dispatcher to alert every member of that team, since no individual is assigned to it yet.
+- An employee logs in, which the login screen verifies against the identity provider. They can paste a free-text draft; the backend asks the language-model provider for a structured suggestion, validates it against the Admin-defined lists, and returns that candidate. The employee then submits a request through the client (using the suggestion or filling the form themselves), picking a category from the Admin-defined list, or "Other" with a team picked directly if none fit. That request goes straight to the backend, which validates it, saves it to the database with its status set to New, routes it to the right team based on the category chosen, and tells the notification dispatcher to alert every member of that team, since no individual is assigned to it yet.
 
 - While a request is open, the backend pushes live updates to anyone currently viewing it, whether that's the requester or the owning team, whenever the status changes, a message is sent, or the request is claimed or unclaimed.
 
@@ -97,6 +101,8 @@ Each piece below lists what can go wrong and what the system does about it.
 
 - **External notification channel**: unreachable, rejects the message, or times out. Same response as above, the request is unaffected either way.
 
+- **Language-model provider**: unreachable, times out, or returns text that is not valid JSON / uses unknown ids. The suggestion call fails with a clear error; no request is created. The employee can still submit using the ordinary form.
+
 - **Escalation scheduler**: misses a scheduled run, or the check itself fails. Nothing is lost, it simply checks again next cycle.
 
 The connections between these pieces can fail on their own too, even if both sides are otherwise healthy:
@@ -146,7 +152,7 @@ Volume is assumed to be low to moderate rather than high-throughput or public fa
 
 - Attachments stay inside the database rather than being split into a separate file store. The common practice for file storage is a dedicated object store like S3, with only a reference kept in the database, since it keeps backups lighter and keeps large files from weighing down a database that's meant to be fast at structured queries, not at storing bytes. At this system's expected scale, low to moderate volume, internal use, that overhead isn't worth taking on yet, so files stay in the database for now. The schema is already built so this is cheap to change later: the attachment's file_ref field is typed as a storage key or blob on purpose, so switching to an object store later means changing what that one field points to, not redesigning the schema.
 
-- Categories are defined and maintained by the Admin rather than typed freely by employees, which keeps them consistent and keeps routing reliable. An "Other" option with a directly picked team exists as a deliberate escape hatch for the cases the fixed list doesn't cover, so mandatory categorization (no request left unclassified) doesn't come at the cost of forcing a bad fit. Automatic inference of category was considered and left out; it would realistically require some form of machine learning, which falls outside what this architecture is meant to cover.
+- Categories are defined and maintained by the Admin rather than typed freely by employees, which keeps them consistent and keeps routing reliable. An "Other" option with a directly picked team exists as a deliberate escape hatch for the cases the fixed list doesn't cover, so mandatory categorization (no request left unclassified) doesn't come at the cost of forcing a bad fit. An advisory language-model suggestion can propose a category from that same list before submit; it does not silently classify or create the request. The backend still owns the allowed values, and the employee confirms.
 
 - Claiming is exclusive on purpose. With several people on the same team, letting more than one hold a claim on the same request at once would recreate the exact problem it's meant to solve, duplicated or uncoordinated work with nobody clearly accountable for it.
 
