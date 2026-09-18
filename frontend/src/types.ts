@@ -54,3 +54,15 @@ export interface AccessLog {
   requestId: string;
   accessedAt: string;
 }
+export interface IntakeSuggestion {
+  summary: string;
+  categoryId: string;
+  requestType: string;
+  priorityId: string;
+  suggestedOwningTeamId: string | null;
+  suggestedNextStep: string;
+  selfServeHint: string | null;
+  needsClarification: boolean;
+  clarificationQuestion: string | null;
+  confidence: "high" | "medium" | "low";
+}

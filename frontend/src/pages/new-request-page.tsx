@@ -8,7 +8,13 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Loading } from "../components/loading";
 import { ErrorState } from "../components/error-state";
-import type { Category, Priority, RequestItem, Team } from "../types";
+import type {
+  Category,
+  IntakeSuggestion,
+  Priority,
+  RequestItem,
+  Team,
+} from "../types";
 
 export function NewRequestPage() {
   const { token } = useAuth();
@@ -16,12 +22,32 @@ export function NewRequestPage() {
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
   const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
   const teams = useApiQuery<Team[]>(["teams"], "/teams");
+  const [draft, setDraft] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [priorityId, setPriorityId] = useState("Normal");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [teamId, setTeamId] = useState("");
+  const [suggestion, setSuggestion] = useState<IntakeSuggestion | null>(null);
   const selected = categories.data?.find((c) => c.id === categoryId);
+
+  const applySuggestion = (next: IntakeSuggestion) => {
+    setSuggestion(next);
+    setCategoryId(next.categoryId);
+    setPriorityId(next.priorityId);
+    setSubject(next.summary.slice(0, 200));
+    setDescription(draft.trim());
+    setTeamId(next.suggestedOwningTeamId ?? "");
+  };
+
+  const interpret = useMutation({
+    mutationFn: () =>
+      api<IntakeSuggestion>("/requests/interpret", token, {
+        method: "POST",
+        body: JSON.stringify({ draft: draft.trim() }),
+      }),
+    onSuccess: applySuggestion,
+  });
   const create = useMutation({
     mutationFn: () =>
       api<RequestItem>("/requests", token, {
@@ -56,8 +82,9 @@ export function NewRequestPage() {
           <div className="eyebrow">Intake</div>
           <h1>New request</h1>
           <p className="page-description">
-            Pick a category so it lands with the right team. You can edit the
-            subject and description until someone claims it.
+            Describe the problem in your own words. The hub will suggest a
+            category, team, and next step. You confirm before anything is
+            submitted.
           </p>
         </div>
       </div>
@@ -69,6 +96,70 @@ export function NewRequestPage() {
             create.mutate();
           }}
         >
+          <label>
+            What do you need help with?
+            <textarea
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={4}
+              maxLength={4000}
+              placeholder="e.g. my laptop is shut down and wont open"
+            />
+          </label>
+          <div className="actions">
+            <Button
+              type="button"
+              disabled={!draft.trim() || interpret.isPending}
+              onClick={() => interpret.mutate()}
+            >
+              {interpret.isPending ? "Getting suggestion…" : "Get AI suggestion"}
+            </Button>
+          </div>
+          {interpret.isError && (
+            <p className="form-error">{interpret.error.message}</p>
+          )}
+          {suggestion && (
+            <div className="suggestion-card">
+              <p className="eyebrow">Suggested before you submit</p>
+              <dl>
+                <dt>Summary</dt>
+                <dd>{suggestion.summary}</dd>
+                <dt>Category</dt>
+                <dd>
+                  {categories.data.find((item) => item.id === suggestion.categoryId)
+                    ?.name ?? suggestion.categoryId}
+                </dd>
+                <dt>Owning team</dt>
+                <dd>
+                  {suggestion.suggestedOwningTeamId
+                    ? (teams.data.find(
+                        (item) => item.id === suggestion.suggestedOwningTeamId,
+                      )?.name ?? suggestion.suggestedOwningTeamId)
+                    : "Not sure yet"}
+                </dd>
+                <dt>Priority</dt>
+                <dd>{suggestion.priorityId}</dd>
+                <dt>Next step</dt>
+                <dd>{suggestion.suggestedNextStep}</dd>
+                {suggestion.selfServeHint && (
+                  <>
+                    <dt>You can try</dt>
+                    <dd>{suggestion.selfServeHint}</dd>
+                  </>
+                )}
+              </dl>
+              {suggestion.needsClarification && (
+                <p className="notice warning">
+                  {suggestion.clarificationQuestion ??
+                    "This draft is unclear. Add detail before submitting if you can."}
+                </p>
+              )}
+              <p className="muted">
+                Confidence: {suggestion.confidence}. Edit the fields below if
+                this is wrong — the suggestion is not submitted until you do.
+              </p>
+            </div>
+          )}
           <label>
             Category
             <select

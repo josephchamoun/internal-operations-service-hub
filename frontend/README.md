@@ -41,7 +41,7 @@ The login page offers two paths:
 
 ## What's here
 
-- `src/pages/` — Login, request list (role-scoped: admin/team/own), request detail (reassign from limited view; edit while New and unclaimed; claim/unclaim/status/cancel), and view-only admin pages (users, teams, categories, priorities, access logs, events).
+- `src/pages/` — Login, request list, new request (optional AI suggestion, then submit), request detail, and view-only admin pages.
 - `src/auth`, via `useAuth()` — provides `token` and `user`; `useApiQuery` and the request-detail mutations both read from it.
 - `src/api/client.ts` — the only file in `api/`, exporting the shared `api()` function (attaches `Authorization: Bearer <token>` when a token is passed, normalizes backend errors into `ApiError`) and `apiUrl()` (used for the SSE `EventSource` URL, which can't go through `api()` since it isn't a `fetch` call).
 
