@@ -11,6 +11,7 @@ import { AccessLogsModule } from '../access-logs/access-logs.module';
 import { TeamsModule } from '../teams/teams.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { LiveUpdatesModule } from '../live-updates/live-updates.module';
+import { IntakeAiModule } from '../intake-ai/intake-ai.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { LiveUpdatesModule } from '../live-updates/live-updates.module';
     AccessLogsModule,
     NotificationsModule,
     LiveUpdatesModule,
+    IntakeAiModule,
   ],
   controllers: [RequestsController, LiveUpdatesController],
   providers: [RequestsService, RequestsRepository],

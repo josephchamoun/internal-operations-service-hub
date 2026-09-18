@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { ReassignRequestDto } from './dto/reassign-request.dto';
 import { UpdatePriorityDto } from './dto/update-priority.dto';
 import { UpdateRequestDetailsDto } from './dto/update-request-details.dto';
+import { InterpretRequestDto } from '../intake-ai/dto/interpret-request.dto';
+import { IntakeAiService } from '../intake-ai/intake-ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { HubJwtPayload } from '../auth/auth.service';
@@ -12,7 +14,10 @@ import { HubJwtPayload } from '../auth/auth.service';
 @UseGuards(JwtAuthGuard)
 @Controller('requests')
 export class RequestsController {
-  constructor(private readonly requestsService: RequestsService) {}
+  constructor(
+    private readonly requestsService: RequestsService,
+    private readonly intakeAiService: IntakeAiService,
+  ) {}
 
   @Get('mine')
   findMine(@CurrentUser() actor: HubJwtPayload) {
@@ -37,6 +42,12 @@ export class RequestsController {
   @Get(':id/full')
   findFullDetails(@Param('id') id: string, @CurrentUser() actor: HubJwtPayload) {
     return this.requestsService.findFullDetails(id, actor);
+  }
+
+  @Post('interpret')
+  @HttpCode(200)
+  interpret(@Body() dto: InterpretRequestDto) {
+    return this.intakeAiService.interpret(dto.draft);
   }
 
   @Post()

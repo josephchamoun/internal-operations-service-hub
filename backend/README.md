@@ -48,6 +48,10 @@ FRONTEND_URL=http://localhost:5173
 MAILTRAP_HOST=sandbox.smtp.mailtrap.io
 MAILTRAP_PORT=587
 MAILTRAP_USER=
+
+# Groq — optional AI intake suggestion (free key from https://console.groq.com/keys )
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-20b
 MAILTRAP_PASS=
 NOTIFICATIONS_FROM_EMAIL=noreply@ops-hub.local
 ```
@@ -147,6 +151,7 @@ The actor for every request below is whoever the `Authorization: Bearer <token>`
 | Method | Path                     | Body                                                         | Authorization rule                                                                                                                                                                                                             |
 | ------ | ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | POST   | `/requests`              | `{ categoryId, priorityId?, teamId?, subject, description }` | Requester is always the authenticated user. `teamId` required only if the category has no default team, rejected (`400`) otherwise.                                                                                            |
+| POST   | `/requests/interpret`    | `{ draft }`                                                  | Any authenticated user. Returns an advisory structured suggestion; does not create a request. `502` if the model output is unreadable, `503` if the provider is down or unconfigured.                                         |
 | PATCH  | `/requests/:id/details`  | `{ subject, description }`                                   | Actor must be the requester. Request must be `New` and unclaimed; `400` if claimed or status has left `New`.                                                                                                                   |
 | GET    | `/requests/mine`         | —                                                            | Requests submitted by the authenticated user.                                                                                                                                                                                  |
 | GET    | `/requests`              | —                                                            | Admin: everything. Team member: their team(s)' requests. Employee with no team: only their own.                                                                                                                                |

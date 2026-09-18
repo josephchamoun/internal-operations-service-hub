@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
+import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
 import { createTestDatabase, resetFixtures } from './test-database';
 
 describe('Requests lifecycle (e2e)', () => {
@@ -25,6 +26,22 @@ describe('Requests lifecycle (e2e)', () => {
     })
       .overrideProvider(NotificationsService)
       .useValue({ notifyTeam: jest.fn(), notifyUser: jest.fn() })
+      .overrideProvider(LLM_CLIENT)
+      .useValue({
+        complete: async () =>
+          JSON.stringify({
+            summary: 'Laptop will not power on',
+            categoryId: 'laptop-issue',
+            priorityId: 'Urgent',
+            suggestedOwningTeamId: 'IT',
+            suggestedNextStep:
+              'Submit this as a Laptop Issue. It will land unclaimed in IT’s queue.',
+            selfServeHint: 'Check the charger first.',
+            needsClarification: false,
+            clarificationQuestion: null,
+            confidence: 'high',
+          }),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -116,5 +133,26 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('rejects requests with no auth token at all', async () => {
     await request(app.getHttpServer()).get('/requests').expect(401);
+  });
+
+  it('returns a structured intake suggestion without creating a request', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/requests/interpret')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({ draft: 'my laptop is shut down and wont open' })
+      .expect(200);
+
+    expect(res.body.categoryId).toBe('laptop-issue');
+    expect(res.body.requestType).toBe('IT');
+    expect(res.body.suggestedOwningTeamId).toBe('IT');
+    expect(res.body.summary).toBeDefined();
+    expect(res.body.suggestedNextStep).toBeDefined();
+  });
+
+  it('rejects interpret without auth', async () => {
+    await request(app.getHttpServer())
+      .post('/requests/interpret')
+      .send({ draft: 'my laptop is shut down and wont open' })
+      .expect(401);
   });
 });
