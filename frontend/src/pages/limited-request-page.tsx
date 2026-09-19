@@ -10,6 +10,7 @@ import { Card } from "../components/card";
 import { ErrorState } from "../components/error-state";
 import { Loading } from "../components/loading";
 import { ReassignForm } from "../components/reassign-form";
+import { SilenceToggle } from "../components/silence-toggle";
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -44,6 +45,8 @@ export function LimitedRequestPage() {
 
   const item = request.data;
   const isTeamMember = !!user?.teamIds.includes(item.owningTeamId);
+  const canSilence =
+    isTeamMember && item.status === "New" && !item.claimedBy;
   return (
     <>
       <div className="page-heading detail-title">
@@ -95,6 +98,7 @@ export function LimitedRequestPage() {
               categories={categories.data}
               token={token}
             />
+            <SilenceToggle requestId={id} enabled={canSilence} />
           </Card>
         )}
       </div>

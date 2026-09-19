@@ -18,6 +18,8 @@ import { ErrorState } from "../components/error-state";
 import { Loading } from "../components/loading";
 import { ReassignForm } from "../components/reassign-form";
 import { RequestThread } from "../components/request-thread";
+import { SilenceToggle } from "../components/silence-toggle";
+import { TestEscalationButton } from "../components/test-escalation-button";
 
 const statuses: RequestStatus[] = ["New", "In Progress", "Resolved"];
 
@@ -187,6 +189,8 @@ export function FullRequestPage() {
   const isActive = !["Resolved", "Cancelled"].includes(request.status);
   const canMakeAction = isActive && (isTeamMember || isRequester);
   const canPost = isActive && (isRequester || isTeamMember);
+  const canSilence =
+    isTeamMember && request.status === "New" && !request.claimedBy;
   const canEdit =
     isRequester &&
     request.status === "New" &&
@@ -340,6 +344,7 @@ export function FullRequestPage() {
                     Claim request
                   </Button>
                 )}
+                <SilenceToggle requestId={id} enabled={canSilence} />
                 {isClaimant && (
                   <Button
                     className="secondary"
@@ -420,6 +425,9 @@ export function FullRequestPage() {
                       Change priority
                     </Button>
                   </div>
+                )}
+                {import.meta.env.DEV && isTeamMember && (
+                  <TestEscalationButton requestId={id} />
                 )}
               </div>
             </Card>
