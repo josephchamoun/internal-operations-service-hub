@@ -27,5 +27,6 @@ import { IntakeAiModule } from '../intake-ai/intake-ai.module';
   ],
   controllers: [RequestsController, LiveUpdatesController],
   providers: [RequestsService, RequestsRepository],
+  exports: [RequestsRepository],
 })
 export class RequestsModule {}

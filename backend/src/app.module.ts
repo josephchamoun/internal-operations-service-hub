@@ -12,6 +12,8 @@ import { AccessLogsModule } from './modules/access-logs/access-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LiveUpdatesModule as liveUpdatesModule } from './modules/live-updates/live-updates.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { AttachmentsModule } from './modules/attachments/attachments.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { LiveUpdatesModule as liveUpdatesModule } from './modules/live-updates/l
     AuthModule,
     NotificationsModule,
     liveUpdatesModule,
+    MessagesModule,
+    AttachmentsModule,
   ],
 })
 export class AppModule {}
