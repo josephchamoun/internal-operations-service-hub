@@ -17,6 +17,7 @@ import { Card } from "../components/card";
 import { ErrorState } from "../components/error-state";
 import { Loading } from "../components/loading";
 import { ReassignForm } from "../components/reassign-form";
+import { RequestThread } from "../components/request-thread";
 
 const statuses: RequestStatus[] = ["New", "In Progress", "Resolved"];
 
@@ -55,6 +56,8 @@ export function FullRequestPage() {
     void client.invalidateQueries({ queryKey: ["request", id] });
     void client.invalidateQueries({ queryKey: ["requests"] });
     void client.invalidateQueries({ queryKey: ["mine"] });
+    void client.invalidateQueries({ queryKey: ["messages", id] });
+    void client.invalidateQueries({ queryKey: ["attachments", id] });
   };
   useEffect(() => {
     if (!detail.data) return;
@@ -183,13 +186,14 @@ export function FullRequestPage() {
   const isClaimant = user?.userId === request.claimedBy;
   const isActive = !["Resolved", "Cancelled"].includes(request.status);
   const canMakeAction = isActive && (isTeamMember || isRequester);
+  const canPost = isActive && (isRequester || isTeamMember);
   const canEdit =
     isRequester &&
     request.status === "New" &&
     !request.claimedBy &&
     !isLimited;
   return (
-    <>
+    <div className="full-request">
       <div className="page-heading detail-title">
         <div>
           <Link to={`/requests/${id}`} className="back">
@@ -198,217 +202,236 @@ export function FullRequestPage() {
           <h1>{request.subject}</h1>
           <div className="badges">
             <StatusBadge status={request.status} />
-            <Badge kind="priority" value={request.priorityId} />
+            <Badge kind="priority" value={
+              priorities.data?.find((item) => item.id === request.priorityId)?.name ??
+              request.priorityId
+            } />
           </div>
         </div>
       </div>
-      <div className="detail-grid">
-        <Card>
-          <h2>Full request</h2>
-          {isLimited ? (
-            <p className="notice">
-              Limited view — you are not on the owning team for this request.
-            </p>
-          ) : editing ? (
-            <form
-              className="form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                action.mutate({
-                  path: `/requests/${id}/details`,
-                  body: {
-                    subject: editSubject,
-                    description: editDescription,
-                  },
-                });
-              }}
-            >
-              <label>
-                Subject
-                <input
-                  value={editSubject}
-                  onChange={(event) => setEditSubject(event.target.value)}
-                  required
-                  maxLength={200}
-                />
-              </label>
-              <label>
-                Description
-                <textarea
-                  value={editDescription}
-                  onChange={(event) => setEditDescription(event.target.value)}
-                  required
-                  rows={7}
-                />
-              </label>
+      <div className="full-request-layout">
+        <div className="full-request-main">
+          <Card className="request-brief">
+            <div className="brief-head">
+              <div className="eyebrow">Description</div>
+              {canEdit && !editing && (
+                <Button
+                  className="secondary"
+                  onClick={() => {
+                    setEditSubject(request.subject);
+                    setEditDescription(request.description ?? "");
+                    setEditing(true);
+                  }}
+                >
+                  Edit details
+                </Button>
+              )}
+            </div>
+            {isLimited ? (
+              <p className="notice">
+                Limited view — you are not on the owning team for this request.
+              </p>
+            ) : editing ? (
+              <form
+                className="form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  action.mutate({
+                    path: `/requests/${id}/details`,
+                    body: {
+                      subject: editSubject,
+                      description: editDescription,
+                    },
+                  });
+                }}
+              >
+                <label>
+                  Subject
+                  <input
+                    value={editSubject}
+                    onChange={(event) => setEditSubject(event.target.value)}
+                    required
+                    maxLength={200}
+                  />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    value={editDescription}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                    required
+                    rows={6}
+                  />
+                </label>
+                {action.isError && (
+                  <p className="form-error">{action.error.message}</p>
+                )}
+                <div className="action-group">
+                  <Button type="submit" disabled={action.isPending}>
+                    {action.isPending ? "Saving…" : "Save changes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setEditing(false);
+                      setEditSubject(request.subject);
+                      setEditDescription(request.description ?? "");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <p className="description">{request.description}</p>
+            )}
+          </Card>
+          {!isLimited && (
+            <RequestThread request={request} canPost={canPost} />
+          )}
+        </div>
+        <aside className="full-request-side">
+          <Card>
+            <h2>Details</h2>
+            <dl>
+              <dt>Category</dt>
+              <dd>
+                {categories.data?.find((item) => item.id === request.categoryId)?.name ??
+                  request.categoryId}
+              </dd>
+              <dt>Requester</dt>
+              <dd>{request.requesterId}</dd>
+              <dt>Owning team</dt>
+              <dd>
+                {teams.data?.find((item) => item.id === request.owningTeamId)?.name ??
+                  request.owningTeamId}
+              </dd>
+              <dt>Claimant</dt>
+              <dd>{request.claimedBy ?? "Unclaimed"}</dd>
+            </dl>
+            <div className="detail-links">
+              <Link className="btn secondary" to={`/requests/${id}/events`}>
+                Events
+              </Link>
+              {user?.role === "admin" && (
+                <Link
+                  className="btn secondary"
+                  to={`/requests/${id}/access-logs`}
+                >
+                  Access logs
+                </Link>
+              )}
+            </div>
+          </Card>
+          {canMakeAction ? (
+            <Card className="actions-card">
+              <h2>Actions</h2>
               {action.isError && (
                 <p className="form-error">{action.error.message}</p>
               )}
               <div className="actions">
-                <Button type="submit" disabled={action.isPending}>
-                  {action.isPending ? "Saving…" : "Save changes"}
-                </Button>
-                <Button
-                  type="button"
-                  className="secondary"
-                  onClick={() => {
-                    setEditing(false);
-                    setEditSubject(request.subject);
-                    setEditDescription(request.description ?? "");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <p className="description">{request.description}</p>
-          )}
-          {canEdit && !editing && (
-            <div className="detail-links">
-              <Button
-                className="secondary"
-                onClick={() => {
-                  setEditSubject(request.subject);
-                  setEditDescription(request.description ?? "");
-                  setEditing(true);
-                }}
-              >
-                Edit details
-              </Button>
-            </div>
-          )}
-          <dl>
-            <dt>Category</dt>
-            <dd>{request.categoryId}</dd>
-            <dt>Requester</dt>
-            <dd>{request.requesterId}</dd>
-            <dt>Owning team</dt>
-            <dd>{request.owningTeamId}</dd>
-            <dt>Claimant</dt>
-            <dd>{request.claimedBy ?? "Unclaimed"}</dd>
-          </dl>
-          <div className="detail-links">
-            <Link className="btn secondary" to={`/requests/${id}/events`}>
-              View request events
-            </Link>
-            {user?.role === "admin" && (
-              <Link
-                className="btn secondary"
-                to={`/requests/${id}/access-logs`}
-              >
-                View access logs
-              </Link>
-            )}
-          </div>
-        </Card>
-        {canMakeAction && (
-          <Card className="actions-card">
-            <h2>Actions</h2>
-            {action.isError && (
-              <p className="form-error">{action.error.message}</p>
-            )}
-            <div className="actions">
-              {isTeamMember && !request.claimedBy && (
-                <Button
-                  onClick={() =>
-                    action.mutate({ path: `/requests/${id}/claim` })
-                  }
-                >
-                  Claim request
-                </Button>
-              )}
-              {isClaimant && (
-                <Button
-                  className="secondary"
-                  onClick={() =>
-                    action.mutate({ path: `/requests/${id}/unclaim` })
-                  }
-                >
-                  Unclaim
-                </Button>
-              )}
-              {isClaimant && (
-                <div className="action-group">
-                  <select
-                    value={status}
-                    onChange={(event) =>
-                      setStatus(event.target.value as RequestStatus)
-                    }
-                  >
-                    {statuses.map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
+                {isTeamMember && !request.claimedBy && (
                   <Button
                     onClick={() =>
-                      action.mutate({
-                        path: `/requests/${id}/status`,
-                        body: { status },
-                      })
+                      action.mutate({ path: `/requests/${id}/claim` })
                     }
                   >
-                    Change status
+                    Claim request
                   </Button>
-                </div>
-              )}
-              {isRequester && (
-                <Button
-                  className="danger"
-                  onClick={() =>
-                    action.mutate({ path: `/requests/${id}/cancel` })
-                  }
-                >
-                  Cancel request
-                </Button>
-              )}
-              {isTeamMember && teams.data && categories.data && (
-                <ReassignForm
-                  request={request}
-                  teams={teams.data}
-                  categories={categories.data}
-                  token={token}
-                />
-              )}
-              {isTeamMember && (
-                <div className="action-group">
-                  <select
-                    value={priorityId || request.priorityId}
-                    onChange={(event) => setPriorityId(event.target.value)}
-                  >
-                    {priorities.data?.map((priority) => (
-                      <option value={priority.id} key={priority.id}>
-                        {priority.name}
-                      </option>
-                    ))}
-                  </select>
+                )}
+                {isClaimant && (
                   <Button
                     className="secondary"
-                    disabled={
-                      (priorityId || request.priorityId) === request.priorityId
-                    }
                     onClick={() =>
-                      action.mutate({
-                        path: `/requests/${id}/priority`,
-                        body: { priorityId: priorityId || request.priorityId },
-                      })
+                      action.mutate({ path: `/requests/${id}/unclaim` })
                     }
                   >
-                    Change priority
+                    Unclaim
                   </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
+                )}
+                {isClaimant && (
+                  <div className="action-group stacked">
+                    <select
+                      value={status}
+                      onChange={(event) =>
+                        setStatus(event.target.value as RequestStatus)
+                      }
+                    >
+                      {statuses.map((value) => (
+                        <option key={value}>{value}</option>
+                      ))}
+                    </select>
+                    <Button
+                      onClick={() =>
+                        action.mutate({
+                          path: `/requests/${id}/status`,
+                          body: { status },
+                        })
+                      }
+                    >
+                      Change status
+                    </Button>
+                  </div>
+                )}
+                {isRequester && (
+                  <Button
+                    className="danger"
+                    onClick={() =>
+                      action.mutate({ path: `/requests/${id}/cancel` })
+                    }
+                  >
+                    Cancel request
+                  </Button>
+                )}
+                {isTeamMember && teams.data && categories.data && (
+                  <ReassignForm
+                    request={request}
+                    teams={teams.data}
+                    categories={categories.data}
+                    token={token}
+                    compact
+                  />
+                )}
+                {isTeamMember && (
+                  <div className="action-group stacked">
+                    <select
+                      value={priorityId || request.priorityId}
+                      onChange={(event) => setPriorityId(event.target.value)}
+                    >
+                      {priorities.data?.map((priority) => (
+                        <option value={priority.id} key={priority.id}>
+                          {priority.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      className="secondary"
+                      disabled={
+                        (priorityId || request.priorityId) === request.priorityId
+                      }
+                      onClick={() =>
+                        action.mutate({
+                          path: `/requests/${id}/priority`,
+                          body: { priorityId: priorityId || request.priorityId },
+                        })
+                      }
+                    >
+                      Change priority
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ) : (
+            <p className="action-unavailable">
+              {isActive
+                ? "No actions are available for your role on this request."
+                : `This request is ${request.status.toLowerCase()}.`}
+            </p>
+          )}
+        </aside>
       </div>
-      {!canMakeAction && (
-        <p className="action-unavailable">
-          {isActive
-            ? "No actions are available for your role on this request."
-            : `This request is ${request.status.toLowerCase()} and no further actions can be made.`}
-        </p>
-      )}
-    </>
+    </div>
   );
 }

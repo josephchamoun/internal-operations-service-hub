@@ -8,6 +8,7 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Loading } from "../components/loading";
 import { ErrorState } from "../components/error-state";
+import { fileError } from "../lib/file-rules";
 import type {
   Category,
   IntakeSuggestion,
@@ -29,6 +30,8 @@ export function NewRequestPage() {
   const [description, setDescription] = useState("");
   const [teamId, setTeamId] = useState("");
   const [suggestion, setSuggestion] = useState<IntakeSuggestion | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileIssue, setFileIssue] = useState<string | null>(null);
   const selected = categories.data?.find((c) => c.id === categoryId);
 
   const applySuggestion = (next: IntakeSuggestion) => {
@@ -49,8 +52,10 @@ export function NewRequestPage() {
     onSuccess: applySuggestion,
   });
   const create = useMutation({
-    mutationFn: () =>
-      api<RequestItem>("/requests", token, {
+    mutationFn: async () => {
+      const blocked = files.map(fileError).find(Boolean);
+      if (blocked) throw new Error(blocked);
+      const created = await api<RequestItem>("/requests", token, {
         method: "POST",
         body: JSON.stringify({
           categoryId,
@@ -59,7 +64,17 @@ export function NewRequestPage() {
           description,
           ...(selected?.defaultTeamId ? {} : { teamId }),
         }),
-      }),
+      });
+      if (files.length > 0) {
+        const data = new FormData();
+        files.forEach((file) => data.append("files", file));
+        await api(`/requests/${created.id}/attachments`, token, {
+          method: "POST",
+          body: data,
+        });
+      }
+      return created;
+    },
     onSuccess: (r) => navigate(`/requests/${r.id}`),
   });
   if (categories.isPending || priorities.isPending || teams.isPending)
@@ -227,6 +242,26 @@ export function NewRequestPage() {
               rows={7}
             />
           </label>
+          <label>
+            Files (optional, 5MB each)
+            <input
+              type="file"
+              multiple
+              onChange={(event) => {
+                const next = Array.from(event.target.files ?? []);
+                const blocked = next.map(fileError).find(Boolean);
+                if (blocked) {
+                  setFileIssue(blocked);
+                  setFiles([]);
+                  event.target.value = "";
+                  return;
+                }
+                setFileIssue(null);
+                setFiles(next);
+              }}
+            />
+          </label>
+          {fileIssue && <p className="form-error">{fileIssue}</p>}
           {create.isError && (
             <p className="form-error">{create.error.message}</p>
           )}

@@ -15,7 +15,9 @@ export async function api<T>(
 ): Promise<T> {
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
@@ -38,5 +40,25 @@ export async function api<T>(
     );
   }
   return response.json() as Promise<T>;
+}
+
+export async function downloadFile(
+  path: string,
+  token?: string | null,
+  fileName?: string,
+): Promise<void> {
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(`${BASE_URL}${path}`, { headers });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Could not download the file");
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName ?? "download";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 export const apiUrl = (path: string) => `${BASE_URL}${path}`;

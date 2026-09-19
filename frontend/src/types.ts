@@ -55,6 +55,25 @@ export interface AccessLog {
   requestId: string;
   accessedAt: string;
 }
+export interface AttachmentMeta {
+  id: string;
+  requestId: string;
+  messageId: string | null;
+  uploaderId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+export interface RequestMessage {
+  id: string;
+  requestId: string;
+  senderId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+  attachments: AttachmentMeta[];
+}
 export interface IntakeSuggestion {
   summary: string;
   categoryId: string;

@@ -10,11 +10,13 @@ export function ReassignForm({
   teams,
   categories,
   token,
+  compact = false,
 }: {
   request: RequestItem;
   teams: Team[];
   categories: Category[];
   token: string | null;
+  compact?: boolean;
 }) {
   const navigate = useNavigate();
   const [teamId, setTeamId] = useState("");
@@ -39,10 +41,12 @@ export function ReassignForm({
   return (
     <div className="action-group stacked">
       <strong>Reassign</strong>
-      <p className="muted">
-        Use this if the request does not belong to this team. You do not need
-        to open the full details first.
-      </p>
+      {!compact && (
+        <p className="muted">
+          Use this if the request does not belong to this team. You do not need
+          to open the full details first.
+        </p>
+      )}
       {action.isError && <p className="form-error">{action.error.message}</p>}
       <select
         value={teamId}
