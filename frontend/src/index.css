@@ -829,6 +829,19 @@ dd {
 .file-chip .attachment-link:hover {
   text-decoration: underline;
 }
+.file-chip-replace {
+  position: relative;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.file-chip-replace input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
 .file-chip button:not(.attachment-link) {
   border: none;
   background: transparent;

@@ -78,6 +78,25 @@ export class AttachmentsRepository {
   async remove(id: string): Promise<void> {
     await this.prisma.attachment.delete({ where: { attachmentId: id } });
   }
+
+  async removeAndDropEmptyMessage(id: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const row = await tx.attachment.findUnique({
+        where: { attachmentId: id },
+      });
+      if (!row) return;
+      await tx.attachment.delete({ where: { attachmentId: id } });
+      if (!row.messageId) return;
+      const message = await tx.message.findUnique({
+        where: { messageId: row.messageId },
+        include: { attachments: true },
+      });
+      if (!message) return;
+      if (message.body.trim() === '' && message.attachments.length === 0) {
+        await tx.message.delete({ where: { messageId: message.messageId } });
+      }
+    });
+  }
 }
 
 function toMeta(row: Attachment): AttachmentMeta {

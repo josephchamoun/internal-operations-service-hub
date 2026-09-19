@@ -26,7 +26,10 @@ export class MessagesService {
 
   async list(requestId: string, actor: HubJwtPayload): Promise<MessageEntity[]> {
     await this.requireVisible(requestId, actor);
-    return this.repo.findByRequestId(requestId);
+    const rows = await this.repo.findByRequestId(requestId);
+    return rows.filter(
+      (item) => item.body.trim() !== '' || item.attachments.length > 0,
+    );
   }
 
   async create(

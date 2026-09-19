@@ -133,7 +133,7 @@ export class AttachmentsService {
       throw new NotFoundException(`Attachment ${attachmentId} not found`);
     }
     this.assertCanMutate(request, row.uploaderId, actor);
-    await this.repo.remove(attachmentId);
+    await this.repo.removeAndDropEmptyMessage(attachmentId);
     this.liveUpdatesService.emit(
       request.id,
       request.owningTeamId,

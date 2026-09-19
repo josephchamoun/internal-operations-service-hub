@@ -87,6 +87,32 @@ describe('Messages and attachments (e2e)', () => {
     expect(res.body.attachments[0].fileName).toBe('note.txt');
   });
 
+  it('drops a file-only message when its last attachment is deleted', async () => {
+    const created = await request(app.getHttpServer())
+      .post(`/requests/${requestId}/messages`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .attach('files', Buffer.from('only-file'), {
+        filename: 'solo.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+    const messageId = created.body.id as string;
+    const attachmentId = created.body.attachments[0].id as string;
+
+    await request(app.getHttpServer())
+      .delete(`/requests/${requestId}/attachments/${attachmentId}`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .expect(200);
+
+    const list = await request(app.getHttpServer())
+      .get(`/requests/${requestId}/messages`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .expect(200);
+    expect(list.body.some((item: { id: string }) => item.id === messageId)).toBe(
+      false,
+    );
+  });
+
   it('rejects an admin who is not the requester or on the team', async () => {
     await request(app.getHttpServer())
       .post(`/requests/${requestId}/messages`)

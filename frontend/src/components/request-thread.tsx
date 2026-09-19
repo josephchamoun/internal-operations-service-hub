@@ -67,7 +67,26 @@ export function RequestThread({
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["attachments", request.id] });
+      void client.invalidateQueries({ queryKey: ["messages", request.id] });
     },
+  });
+  const replaceFile = useMutation({
+    mutationFn: ({ attachmentId, file }: { attachmentId: string; file: File }) => {
+      const blocked = fileError(file);
+      if (blocked) throw new Error(blocked);
+      const data = new FormData();
+      data.append("file", file);
+      return api(`/requests/${request.id}/attachments/${attachmentId}`, token, {
+        method: "PATCH",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      setLocalError(null);
+      void client.invalidateQueries({ queryKey: ["attachments", request.id] });
+      void client.invalidateQueries({ queryKey: ["messages", request.id] });
+    },
+    onError: (err: Error) => setLocalError(err.message),
   });
 
   const canMutateRequestFile = (item: AttachmentMeta) =>
@@ -98,12 +117,20 @@ export function RequestThread({
               token={token}
               canMutate={canMutateRequestFile(item)}
               onDelete={() => removeFile.mutate(item.id)}
+              onReplace={(file) =>
+                replaceFile.mutate({ attachmentId: item.id, file })
+              }
             />
           ))}
         </div>
       )}
       <div className="thread" ref={scroller}>
-        {(messages.data ?? []).map((message) => {
+        {(messages.data ?? [])
+          .filter(
+            (message) =>
+              message.body.trim() !== "" || message.attachments.length > 0,
+          )
+          .map((message) => {
           const mine = message.senderId === user?.userId;
           return (
             <article
@@ -136,6 +163,9 @@ export function RequestThread({
                         token={token}
                         canMutate={canMutateRequestFile(item)}
                         onDelete={() => removeFile.mutate(item.id)}
+                        onReplace={(file) =>
+                          replaceFile.mutate({ attachmentId: item.id, file })
+                        }
                       />
                     ))}
                   </div>
@@ -144,7 +174,10 @@ export function RequestThread({
             </article>
           );
         })}
-        {messages.data?.length === 0 && (
+        {!(messages.data ?? []).some(
+          (message) =>
+            message.body.trim() !== "" || message.attachments.length > 0,
+        ) && (
           <p className="thread-empty">No messages yet. Start the thread below.</p>
         )}
       </div>
@@ -239,12 +272,14 @@ function AttachmentChip({
   token,
   canMutate,
   onDelete,
+  onReplace,
 }: {
   item: AttachmentMeta;
   requestId: string;
   token: string | null;
   canMutate: boolean;
   onDelete: () => void;
+  onReplace: (file: File) => void;
 }) {
   return (
     <span className="file-chip">
@@ -262,9 +297,22 @@ function AttachmentChip({
         {item.fileName}
       </button>
       {canMutate && (
-        <button type="button" aria-label={`Remove ${item.fileName}`} onClick={onDelete}>
-          ×
-        </button>
+        <>
+          <label className="file-chip-replace">
+            Replace
+            <input
+              type="file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) onReplace(file);
+              }}
+            />
+          </label>
+          <button type="button" aria-label={`Remove ${item.fileName}`} onClick={onDelete}>
+            ×
+          </button>
+        </>
       )}
     </span>
   );
