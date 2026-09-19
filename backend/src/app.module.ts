@@ -14,6 +14,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { LiveUpdatesModule as liveUpdatesModule } from './modules/live-updates/live-updates.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
+import { SilencesModule } from './modules/silences/silences.module';
+import { EscalationsModule } from './modules/escalations/escalations.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
     liveUpdatesModule,
     MessagesModule,
     AttachmentsModule,
+    SilencesModule,
+    EscalationsModule,
   ],
 })
 export class AppModule {}

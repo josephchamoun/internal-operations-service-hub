@@ -13,6 +13,7 @@ describe('RequestsService — claim authorization rule', () => {
     mockRepo = {
       findById: jest.fn(),
       update: jest.fn(),
+      clearSilence: jest.fn(),
     };
     mockNotificationsService = {
       notifyTeam: jest.fn(),
@@ -77,6 +78,7 @@ describe('RequestsService — claim authorization rule', () => {
 
     expect(result.claimedBy).toBe('dev-manager');
     expect(mockRepo.update).toHaveBeenCalledWith('req1', { claimedBy: 'dev-manager' });
+    expect(mockRepo.clearSilence).toHaveBeenCalledWith('req1', 'dev-manager');
   });
 });
 
@@ -90,7 +92,7 @@ describe('RequestsService — unclaim returns the request to New', () => {
   const claimant = { userId: 'dev-manager', role: 'team_member', teamIds: ['IT'] };
 
   beforeEach(() => {
-    mockRepo = { findById: jest.fn(), update: jest.fn() };
+    mockRepo = { findById: jest.fn(), update: jest.fn(), clearSilence: jest.fn() };
     mockRequestEventsService = { append: jest.fn() };
     mockNotificationsService = { notifyTeam: jest.fn(), notifyUser: jest.fn() };
     mockLiveUpdatesService = { emit: jest.fn() };
@@ -186,6 +188,7 @@ describe('RequestsService — edit details rule', () => {
     mockRepo = {
       findById: jest.fn().mockResolvedValue(newUnclaimed),
       update: jest.fn(),
+      clearSilence: jest.fn(),
     };
 
     service = new RequestsService(

@@ -13,6 +13,13 @@ export class RequestEventsService {
     return this.repo.findByRequestId(requestId);
   }
 
+  findLatestOfType(
+    requestId: string,
+    eventType: RequestEventType,
+  ): Promise<RequestEventEntity | undefined> {
+    return this.repo.findLatestOfType(requestId, eventType);
+  }
+
   findAll(actor: HubJwtPayload): Promise<RequestEventEntity[]> {
     if (actor.role === 'admin') {
       return this.repo.findAll();

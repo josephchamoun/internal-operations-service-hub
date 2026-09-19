@@ -60,6 +60,17 @@ export class RequestsRepository {
     });
     return toEntity(row);
   }
+
+  async findNewUnclaimed(): Promise<RequestEntity[]> {
+    const rows = await this.prisma.request.findMany({
+      where: { status: PrismaRequestStatus.New, claimedBy: null },
+    });
+    return rows.map(toEntity);
+  }
+
+  async clearSilence(requestId: string, userId: string): Promise<void> {
+    await this.prisma.silence.deleteMany({ where: { requestId, userId } });
+  }
 }
 
 function toPrismaStatus(status: RequestStatus): PrismaRequestStatus {

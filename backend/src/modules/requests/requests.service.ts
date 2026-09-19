@@ -177,6 +177,8 @@ export class RequestsService {
       toValue: actor.userId,
     });
 
+    await this.repo.clearSilence(id, actor.userId);
+
     this.liveUpdatesService.emit(id, request.owningTeamId, request.requesterId, 'claimed', { claimedBy: actor.userId });
     // Per product-spec.md: claiming itself does not trigger an external
     // notification, since the live push above already reflects it for
@@ -350,6 +352,7 @@ export class RequestsService {
       });
     }
 
+    await this.repo.clearSilence(id, actor.userId);
     await this.recordReturnToNew(updated, actor, previousStatus);
 
     void this.notificationsService.notifyTeam(

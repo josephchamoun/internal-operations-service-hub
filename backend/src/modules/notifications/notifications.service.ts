@@ -75,12 +75,23 @@ export class NotificationsService {
   }
 
   async notifyTeam(teamId: string, subject: string, body: string): Promise<void> {
+    await this.notifyTeamExcept(teamId, [], subject, body);
+  }
+
+  async notifyTeamExcept(
+    teamId: string,
+    exceptUserIds: string[],
+    subject: string,
+    body: string,
+  ): Promise<void> {
+    const skip = new Set(exceptUserIds);
     const memberships = await this.teamMembershipsService.findByTeamId(teamId);
 
     for (const m of memberships) {
-        const user = await this.usersService.findOne(m.userId);
-        await this.send(user.email, subject, body);
-        await this.delay(300); // stay under the sandbox's per-second rate limit
+      if (skip.has(m.userId)) continue;
+      const user = await this.usersService.findOne(m.userId);
+      await this.send(user.email, subject, body);
+      await this.delay(300); // stay under the sandbox's per-second rate limit
     }
   }
 

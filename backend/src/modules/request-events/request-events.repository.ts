@@ -28,6 +28,17 @@ export class RequestEventsRepository {
     return rows.map(toEntity);
   }
 
+  async findLatestOfType(
+    requestId: string,
+    eventType: RequestEventType,
+  ): Promise<RequestEventEntity | undefined> {
+    const row = await this.prisma.requestEvent.findFirst({
+      where: { requestId, eventType },
+      orderBy: { createdAt: 'desc' },
+    });
+    return row ? toEntity(row) : undefined;
+  }
+
   async create(entity: RequestEventEntity): Promise<RequestEventEntity> {
     const row = await this.prisma.requestEvent.create({
       data: {
