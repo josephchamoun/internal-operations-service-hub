@@ -41,9 +41,9 @@ The login page offers two paths:
 
 ## What's here
 
-- `src/pages/` — Login, request list, new request (optional AI suggestion, then submit), request detail, and view-only admin pages.
-- `src/auth`, via `useAuth()` — provides `token` and `user`; `useApiQuery` and the request-detail mutations both read from it.
-- `src/api/client.ts` — the only file in `api/`, exporting the shared `api()` function (attaches `Authorization: Bearer <token>` when a token is passed, normalizes backend errors into `ApiError`) and `apiUrl()` (used for the SSE `EventSource` URL, which can't go through `api()` since it isn't a `fetch` call).
+- `src/pages/` — Login, request list, new request (optional AI suggestion + optional files, then submit), limited/full request detail (conversation, silence, actions), events, access logs, and **admin CRUD** for users/teams/categories/priorities.
+- `src/auth`, via `useAuth()` — provides `token` and `user`; `useApiQuery` and mutations both read from it.
+- `src/api/client.ts` — `api()` (JSON or `FormData`; no JSON content-type on uploads), `downloadFile()`, and `apiUrl()` for SSE.
 
 ## Authorization boundaries: both layers exist, and they're not the same one
 
@@ -56,4 +56,6 @@ The backend check is the actual boundary — it's what can't be bypassed. The UI
 
 ## Known limitations
 
-- Admin pages are view-only — no create/edit/delete forms exist yet.
+- Install/run is unchanged: `npm install` then `npm run dev`, backend must be up.
+- Queue filters are status, priority, and claim — not category.
+- **Test reminders** on the full request page is local-dev only (`import.meta.env.DEV`); it calls `POST /escalations/run`, which the backend also disables when `NODE_ENV=production`.

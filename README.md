@@ -2,75 +2,79 @@
 
 A single, trackable entry point for internal employee requests, starting with IT and HR. Employees submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox. This replaces those informal channels with one system of record.
 
-## Status: v0.4, AI-assisted request intake (same repo)
+## Status: current branch `week4/ai-assistant`
 
-The Week 3 request flow is still the product. v0.4 adds one advisory step **before submit**: the employee pastes free text, the backend asks Groq for a structured suggestion (summary, IT/HR type, category, next step), validates it against Admin-defined lists, and the employee confirms. See `docs/week4-production-ai.md`. A Groq API key is optional; without it, the ordinary form still works.
+The hub now covers the Week 3 request lifecycle **plus** Week 4 AI intake **plus** the remaining product pieces that used to be schema-only: admin CRUD, messages and file attachments, per-user silence, and the escalation reminder scheduler.
 
-The full Service Request flow — submit, land in the owning team's queue, claim, work, change status, resolve/reassign/cancel — now runs end to end through a real React frontend, a NestJS backend, and a real SQLite database (via Prisma), behind authentication (Microsoft Entra ID, plus a test-only `dev-login` path) and per-action authorization. Email notifications (via Mailtrap's sandbox) and live in-page updates (SSE) are also wired up. See `docs/week3-full-stack-delivery.md` for the full write-up, including exactly which assignment requirements are met and where.
+Install and run are unchanged (backend + frontend READMEs). A Groq API key is still optional; without it, the ordinary submit form works.
 
-Everything outside this flow (admin CRUD, messages/attachments, escalation reminders, CI/CD, and production infrastructure) is still design-only or not yet started. See "What's not built yet" below.
+## What has been built so far
+
+Work in this repo, in order:
+
+1. **Product design** — `docs/product-spec.md`, `docs/architecture.md`, `docs/data-model.md`, and `docs/decisions/ADR-001.md` (why a relational database).
+2. **Week 2** — NestJS request lifecycle against a stand-in store: create, limited/full view, claim, unclaim, status, cancel, reassign, priority, events, access log. See `docs/week2-agentic-workflow.md`.
+3. **Week 3** — Real SQLite (Prisma), Entra ID + test `dev-login`, per-action authorization, React frontend, Mailtrap notifications, SSE live updates. See `docs/week3-full-stack-delivery.md`.
+4. **Week 4 AI** — Advisory Groq suggestion before submit (`POST /requests/interpret`). See `docs/week4-production-ai.md`.
+5. **On top of that (same repo)**  
+   - Admin can create, edit, and delete users, teams, categories, and priorities (with the locked `Other` / `Normal` rules).  
+   - Requester and owning team can message on a request until it is Resolved or Cancelled; files (images, PDF, Word, txt, 5MB) store as SQLite blobs; invalid files do not leave an empty message.  
+   - Owning-team members can silence **escalation reminders** for themselves on one request; claim or reassign clears *their* mute.  
+   - A background sweep looks at New + unclaimed requests on an interval (default 2 hours) and emails the team when that request’s **priority window** has elapsed, skipping silenced members. Local Vite also has a **Test reminders** control so you do not wait hours.
 
 ## Where to start
 
-Read the docs in this order, each one builds on the last:
+1. `docs/product-spec.md` — what the system needs to do.  
+2. `docs/architecture.md` — components and data flows.  
+3. `docs/data-model.md` — what is stored.  
+4. `docs/decisions/ADR-001.md` — why relational.  
+5. `docs/week3-full-stack-delivery.md` — auth, frontend, notifications, SSE.  
+6. `docs/week4-production-ai.md` — intake suggestion and eval command.
 
-1. `docs/product-spec.md`, what the system needs to do and why, written for anyone regardless of technical background.
-2. `docs/architecture.md`, how the system is structured to meet that spec, its components, data flows, failure handling, and the reasoning behind the major design choices.
-3. `docs/data-model.md`, what the system actually stores, how the pieces relate to each other, and how the real queries get answered.
-4. `docs/decisions/ADR-001.md`, a deeper look at one specific decision, why the data lives in a relational database rather than a document store.
-5. `docs/week3-full-stack-delivery.md`, the v0.3 delivery: auth, authorization, notifications, live updates, setup/run/test.
-6. `docs/week4-production-ai.md`, the v0.4 intake suggestion: what is sent to the model, the structured result, eval cases, and `npm run test:ai-eval`.
+## Install, run, and test
 
-## Install, run, and test this from scratch
+Setup details live in:
 
-Full setup — environment variables, Microsoft Entra ID app registration, Mailtrap sandbox setup, and database seeding — lives one level down, one README per app, since each app's setup is only relevant to someone actually running that app:
-
-- `backend/README.md` — backend install, `.env` setup, Entra ID and Mailtrap configuration, database setup/seeding, running the server, running the automated tests, and the full endpoint list.
-- `frontend/README.md` — frontend install, `.env` setup, and running the dev server.
-
-Quick version, once both are configured:
+- `backend/README.md` — env, Entra, Mailtrap, Groq, Prisma, endpoints, tests.  
+- `frontend/README.md` — Vite, login, what screens exist.
 
 ```bash
 cd backend && npm install && npx prisma generate && npx prisma migrate dev && npx prisma db seed && npm run start:dev
 cd frontend && npm install && npm run dev   # separate terminal
 ```
 
-**Exercising the flow:** open the frontend, log in via the test-identity picker as an employee, submit a request, then log in as a team member on the owning team to claim and work it — see `docs/week3-full-stack-delivery.md` for the full walkthrough, including how to see the authorization denial in action.
+**Try it:** log in as an employee (test identity picker), submit a request (optionally after an AI suggestion), then log in as a member of the owning team to claim, message, silence reminders, or change priority.
 
-**Running the tests** (`cd backend && npm run test && npm run test:e2e && npm run test:ai-eval`) — Week 3 coverage is in `docs/week3-full-stack-delivery.md`; the AI intake evals are in `docs/week4-production-ai.md`.
+**Tests** (`cd backend && npm run test && npm run test:e2e && npm run test:ai-eval`) — Week 3 cases plus messages, silence/escalation, and AI evals.
 
 ## What's done
 
-A complete product spec: the problem, the actors, functional requirements, non functional requirements, and acceptance criteria.
+Product spec, architecture, data model, and ADR-001.
 
-A complete architecture: components, external dependencies, data flows, authorization boundaries, and failure handling.
+Full request lifecycle against Prisma/SQLite: list, limited and full detail, edit while New and unclaimed, claim, unclaim, status, cancel, reassign, priority, events, access log.
 
-A complete data model: entities, relationships, lifecycle rules, real access patterns, and justified indexes.
+Authentication (Entra + `dev-login`) and per-action authorization. JWT role/team membership is reloaded from the database on each request.
 
-One fully reasoned architecture decision record, covering the choice of database.
+React frontend for login, submit, my requests, team queue, limited/full detail, conversation, admin CRUD, access logs, and events.
 
-The full request lifecycle (create, view — list, limited detail, full detail —, edit details while New and unclaimed, claim, unclaim, change status, cancel, reassign, change priority), backed by an event history and an access log, now running against a real SQLite database via Prisma instead of mock JSON.
+Email (Mailtrap, fire-and-forget) on new request, unclaim, reassignment, status change, new message, and escalation reminders.
 
-Authentication via Microsoft Entra ID (real OAuth2/OIDC), plus a test-only `dev-login` path used for local testing and the automated test suite. Neither auto-creates users — an Admin must provision a `User` row by email first.
+SSE live updates on an open request.
 
-Per-action authorization on every mutating request-lifecycle endpoint (who can edit details, claim, unclaim, cancel, reassign, change status/priority, and who gets the full vs. limited view), plus role-scoped listing (admin sees all, a team member sees their team's queue, an employee with no team sees only their own).
+Admin CRUD for users, teams, categories, and priorities.
 
-A React (Vite + TypeScript) frontend covering the full flow: login, request submission, role-scoped request list, request detail with edit/claim/unclaim/status/cancel/reassign actions, and view-only admin pages for users/teams/categories/priorities and the system-wide access-log/event views.
+Messages and attachments (including replace/delete while New and unclaimed, by the uploader).
 
-Email notifications on key lifecycle events (new request, unclaimed, status change, reassignment) via Mailtrap's sandbox, sent fire-and-forget so a slow or failed send never blocks the underlying action.
+Per-user silence and the escalation scheduler.
 
-Live in-page updates over SSE for anyone with a request's detail page open, authorized per-request the same way the rest of the request-detail endpoints are.
-
-One invalid request rejected on purpose, one expected failure handled on purpose, a unit test, an integration test, and an E2E test — see `docs/week3-full-stack-delivery.md` §0 and §6 for exactly where each one lives.
+AI advisory intake.
 
 ## What's not built yet
 
-No admin CRUD (create/edit/delete) for users, teams, categories, or priorities — the admin pages added this round are view-only.
+No CI/CD, deployment, monitoring, or production infrastructure.
 
-No Messages, Attachments, or the `Silence` (escalation-mute) mechanism — these tables exist in the Prisma schema but have no service/controller logic yet.
+No rate limiting — production-hardening, not this phase.
 
-No escalation reminder scheduler.
+Queue filters cover status, priority, and claim state; there is still no **category** filter on the team list (product spec item 22).
 
-No CI/CD, deployment, or production infrastructure.
-
-No rate limiting — deliberately deferred as production-hardening rather than something this phase targets.
+Attachment **retention** (how long blobs are kept) is still unspecified in the spec, so files stay until the request does.

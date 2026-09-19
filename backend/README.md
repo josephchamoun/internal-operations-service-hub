@@ -1,4 +1,4 @@
-# Ops Hub Backend (v0.3): Requests Feature, real database, real auth
+# Ops Hub Backend: request lifecycle, auth, messages, silence, escalation
 
 ## Setup
 
@@ -54,6 +54,11 @@ GROQ_API_KEY=
 GROQ_MODEL=openai/gpt-oss-20b
 MAILTRAP_PASS=
 NOTIFICATIONS_FROM_EMAIL=noreply@ops-hub.local
+
+# Escalation scheduler — how often to *check* New unclaimed requests (ms).
+# Actual reminder cadence still follows each priority's window (e.g. Normal = 24h).
+# 7200000 = 2 hours. 0 disables the timer. Tests skip the timer automatically.
+ESCALATION_CHECK_INTERVAL_MS=7200000
 ```
 
 Generate a `JWT_SECRET` quickly:
@@ -76,7 +81,7 @@ npx prisma db seed     # runs prisma/seed.ts — teams, categories, priorities, 
 
 If you ever change `schema.prisma`, run `npx prisma migrate dev --name <what_changed>` to generate and apply a new migration, then re-run `npx prisma db seed` if the seed data needs to match.
 
-**To inspect the database visually:** `npx prisma studio` opens a browser UI against `dev.db` — useful since there's no admin CRUD yet, so this is currently the only way to edit users, teams, categories, or priorities.
+**To inspect the database visually:** `npx prisma studio` opens a browser UI against `dev.db`. Day-to-day admin work (users, teams, categories, priorities) is also available in the frontend admin pages.
 
 ### Setting up real login (Microsoft Entra ID) — optional
 
@@ -94,7 +99,7 @@ Once configured, `GET /auth/login` redirects to Microsoft's real login page, and
 
 ### Setting up email notifications (Mailtrap) — optional
 
-Only needed if you want to see the notification emails sent on key lifecycle events (new request, unclaim, status change, reassignment). Skip this if you don't need to see the emails.
+Only needed if you want to see the notification emails sent on key lifecycle events (new request, unclaim, status change, reassignment, new message, escalation reminder). Skip this if you don't need to see the emails.
 
 1. Create a free account at [mailtrap.io](https://mailtrap.io) — no credit card required for the Email Sandbox product.
 2. Go to **Email Testing → Inboxes** → open the default sandbox inbox → **SMTP Settings** tab → select **Node.js – Nodemailer**.
@@ -140,9 +145,42 @@ Storage: real SQLite via Prisma (`prisma/schema.prisma`, `prisma/dev.db`). No mo
 
 Auth: real, via the two paths above. Every route requires a valid JWT; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from the token.
 
-Frontend: exists now, in `../frontend` (React + Vite + TypeScript), covering the full flow plus view-only admin pages. See its own README.
+Frontend: exists now, in `../frontend` (React + Vite + TypeScript), covering the full flow plus admin CRUD. See its own README.
 
-Scope: still the request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority) plus event history and access log, now backed by a real database and real auth. Admin management of users/categories/priorities/teams is still not built — that's done directly via `npx prisma studio` or `prisma/seed.ts` for now, though it's now visible (read-only) in the frontend's admin pages.
+Scope: request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority), event history, access log, **admin CRUD**, **messages and attachments**, **per-user silence**, and the **escalation scheduler**. Auth is still JWT (Entra or `dev-login`). Role and team memberships are loaded from the database on every request, not trusted from the token snapshot alone.
+
+`GET /auth/me` returns the hydrated current user (`userId`, `role`, `teamIds`).
+
+## Messages, attachments, silence, and escalation
+
+Same JWT as everywhere else. Files are SQLite BLOBs (not disk paths). Allowed types: jpeg/png/gif/webp, PDF, `.docx`, plain text. Max **5MB** each. A rejected file is not saved, and the message is not created.
+
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| GET    | `/requests/:id/messages` | Requester, owning team, or admin. |
+| POST   | `/requests/:id/messages` | Multipart: `body` (optional) and `files` (optional). Need text, files, or both. Requester or any owning-team member. Blocked on Resolved/Cancelled. |
+| GET    | `/requests/:id/attachments` | Metadata only. |
+| POST   | `/requests/:id/attachments` | Request-level files while **New and unclaimed**. |
+| GET    | `/requests/:id/attachments/:attachmentId` | Download bytes. |
+| PATCH  | `/requests/:id/attachments/:attachmentId` | Replace. Uploader only, New and unclaimed. Field name `file`. |
+| DELETE | `/requests/:id/attachments/:attachmentId` | Remove. Same mutate rule as replace. |
+| GET    | `/requests/:id/silence` | `{ silenced: boolean }` for **this** user. Owning-team members only. |
+| PUT    | `/requests/:id/silence` | Mute escalation reminders for this user on this request. |
+| DELETE | `/requests/:id/silence` | Un-mute. Claim and reassign also clear **that actor's** mute. |
+| POST   | `/escalations/run` | **Not production.** JWT required. Optional body `{ "now": "<ISO time>" }` to simulate the clock. Returns `{ reminded: string[] }`. |
+
+The scheduler, when the process is running and `ESCALATION_CHECK_INTERVAL_MS` is > 0, periodically loads **New + unclaimed** requests and emails owning-team members (except silenced) if that request's priority window has elapsed since `createdAt` or the last `escalation_reminder` event.
+
+## Admin write endpoints
+
+Admin only. Duplicate emails rejected. Last admin cannot be removed. `Other` is not edited or deleted. `Normal` is not deleted. Delete is unused-only (`409` if still referenced). New ids are generated in code (UUID), not typed by the admin.
+
+| Method | Path |
+| ------ | ---- |
+| POST / PATCH / DELETE | `/users`, `/users/:id` |
+| POST / PATCH / DELETE | `/teams`, `/teams/:id` |
+| POST / PATCH / DELETE | `/categories`, `/categories/:id` |
+| POST / PATCH / DELETE | `/priorities`, `/priorities/:id` |
 
 ## Requests endpoints
 
@@ -200,7 +238,7 @@ All errors follow Nest's standard shape:
 | 404    | A referenced entity does not exist: user, category, priority, team, or request.                                                                                                                                          |
 | 409    | The request is already claimed.                                                                                                                                                                                          |
 
-## Reference data (seeded, still read-only)
+## Reference data (seeded; also editable by an admin in the app)
 
 Seeded via `prisma/seed.ts` (literal in-file arrays, no longer read from `data/*.json`) — re-run `npx prisma db seed` any time to reset it. Includes:
 
@@ -241,10 +279,11 @@ Seeded via `prisma/seed.ts` (literal in-file arrays, no longer read from `data/*
 
 ```bash
 npm run test        # unit + integration tests
-npm run test:e2e    # end-to-end tests
+npm run test:e2e    # end-to-end tests (includes requests, messages, silence/escalation, admin)
+npm run test:ai-eval
 ```
 
-Both run against a dedicated `prisma/test.db`, provisioned and reset automatically by `test/test-database.ts` — never against `dev.db`, so running the tests never touches your local seeded data. No manual setup needed beyond `npm install`. See `../docs/week3-full-stack-delivery.md` §6 for exactly what each test covers.
+Both `test` and `test:e2e` run against a dedicated `prisma/test.db`, provisioned and reset automatically by `test/test-database.ts` — never against `dev.db`. See `../docs/week3-full-stack-delivery.md` §6 for the original request-lifecycle cases; messages live in `test/messages.e2e-spec.ts`, silence/escalation in `test/silence.e2e-spec.ts`.
 
 ## Why Prisma + SQLite instead of file storage
 
@@ -277,11 +316,16 @@ backend/
 │       ├── access-logs/           # who opened a request's full detail, and when
 │       ├── notifications/         # Mailtrap email dispatch, fire-and-forget
 │       ├── live-updates/          # SSE push for anyone with a request open
+│       ├── intake-ai/             # POST /requests/interpret
+│       ├── messages/ attachments/ silences/ escalations/
 │       ├── users/ teams/ categories/ priorities/ team-memberships/
-│       │   # same shape as requests/, minus write methods — still admin-manageable-in-future
+│       │   # same shape as requests/, including admin write routes
 ├── test/
-│   ├── test-database.ts          # provisions + resets the dedicated test.db
-│   └── requests.e2e-spec.ts
+│   ├── test-database.ts
+│   ├── requests.e2e-spec.ts
+│   ├── messages.e2e-spec.ts
+│   ├── silence.e2e-spec.ts
+│   └── admin.e2e-spec.ts
 ├── .env                          # NOT committed
 ├── .env.example
 └── package.json

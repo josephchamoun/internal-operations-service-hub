@@ -83,4 +83,9 @@ This runs `src/modules/intake-ai/intake-ai.eval.spec.ts` with a **mocked** model
 
 - `backend/src/modules/intake-ai/` — prompts, Groq client, normalize, eval fixtures  
 - `POST /requests/interpret` — authenticated; `200` on success  
-- Frontend: `frontend/src/pages/new-request-page.tsx`  
+- Frontend: `frontend/src/pages/new-request-page.tsx`
+
+## Also in this repo (same `week4/ai-assistant` branch, not part of the AI eval)
+
+After intake shipped: admin CRUD; request messages and SQLite file attachments; per-user silence; escalation sweep (`ESCALATION_CHECK_INTERVAL_MS`). Run/setup is still `backend/README.md` and `frontend/README.md`. Extra e2e: `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`.
+  
