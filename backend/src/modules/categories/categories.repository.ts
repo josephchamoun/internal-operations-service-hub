@@ -16,6 +16,45 @@ export class CategoriesRepository {
     const row = await this.prisma.category.findUnique({ where: { categoryId: id } });
     return row ? toEntity(row) : undefined;
   }
+
+  async countRequests(id: string): Promise<number> {
+    return this.prisma.request.count({ where: { categoryId: id } });
+  }
+
+  async create(input: {
+    id: string;
+    name: string;
+    defaultTeamId: string | null;
+  }): Promise<CategoryEntity> {
+    const row = await this.prisma.category.create({
+      data: {
+        categoryId: input.id,
+        name: input.name,
+        defaultTeamId: input.defaultTeamId,
+        createdAt: new Date(),
+      },
+    });
+    return toEntity(row);
+  }
+
+  async update(input: {
+    id: string;
+    name: string;
+    defaultTeamId: string | null;
+  }): Promise<CategoryEntity> {
+    const row = await this.prisma.category.update({
+      where: { categoryId: input.id },
+      data: {
+        name: input.name,
+        defaultTeamId: input.defaultTeamId,
+      },
+    });
+    return toEntity(row);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.prisma.category.delete({ where: { categoryId: id } });
+  }
 }
 
 function toEntity(row: Category): CategoryEntity {
