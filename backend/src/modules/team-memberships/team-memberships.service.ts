@@ -16,6 +16,10 @@ export class TeamMembershipsService {
     return this.repo.findAll();
   }
 
+  listByUserId(userId: string): Promise<TeamMembershipEntity[]> {
+    return this.repo.findByUserId(userId);
+  }
+
   async findByUserId(userId: string): Promise<TeamMembershipEntity[]> {
     await this.usersService.findOne(userId);
     return this.repo.findByUserId(userId);

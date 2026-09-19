@@ -1,12 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { HubJwtPayload } from '../auth.service';
+import { UsersService } from '../../users/users.service';
+import { TeamMembershipsService } from '../../team-memberships/team-memberships.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly teamMembershipsService: TeamMembershipsService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -15,7 +21,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: HubJwtPayload): Promise<HubJwtPayload> {
-    // Whatever is returned here becomes `request.user`.
-    return payload;
+    if (!payload?.userId) {
+      throw new UnauthorizedException();
+    }
+    const user = await this.usersService.findById(payload.userId);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    const memberships = await this.teamMembershipsService.listByUserId(user.id);
+    return {
+      userId: user.id,
+      role: user.role,
+      teamIds: memberships.map((item) => item.teamId),
+    };
   }
 }

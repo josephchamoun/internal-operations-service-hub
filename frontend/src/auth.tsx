@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CurrentUser } from "./types";
+import { api } from "./api/client";
 
 type AuthState = {
   token: string | null;
@@ -41,17 +42,42 @@ function restoreSession(): { token: string | null; user: CurrentUser | null } {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState(restoreSession);
   const [notice, setNotice] = useState<string | null>(null);
-  const login = useCallback((nextToken: string) => {
-    const nextUser = decodeToken(nextToken);
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
-    setSession({ token: nextToken, user: nextUser });
-    setNotice(null);
-  }, []);
   const logout = useCallback((message?: string) => {
     sessionStorage.removeItem(TOKEN_STORAGE_KEY);
     setSession({ token: null, user: null });
     setNotice(message ?? null);
   }, []);
+  const refreshUser = useCallback(
+    async (token: string) => {
+      try {
+        const live = await api<CurrentUser>("/auth/me", token);
+        setSession((current) =>
+          current.token === token ? { token, user: live } : current,
+        );
+      } catch {
+        logout("Your session is no longer valid. Please sign in again.");
+      }
+    },
+    [logout],
+  );
+  const login = useCallback(
+    (nextToken: string) => {
+      const nextUser = decodeToken(nextToken);
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
+      setSession({ token: nextToken, user: nextUser });
+      setNotice(null);
+      void refreshUser(nextToken);
+    },
+    [refreshUser],
+  );
+  useEffect(() => {
+    if (!session.token) return;
+    const token = session.token;
+    void refreshUser(token);
+    const onFocus = () => void refreshUser(token);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [session.token, refreshUser]);
   return (
     <AuthContext.Provider
       value={{

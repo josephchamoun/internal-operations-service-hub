@@ -1,14 +1,16 @@
-import { Controller, Get, Post, Body, Query, Res, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Res, ForbiddenException, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
+import { AuthService, HubJwtPayload } from './auth.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   @Get('login')
   async login(@Res() res: Response) {
@@ -47,5 +49,11 @@ export class AuthController {
       throw new ForbiddenException('Dev login is disabled in production');
     }
     return this.authService.devLogin(userId);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() actor: HubJwtPayload) {
+    return actor;
   }
 }
