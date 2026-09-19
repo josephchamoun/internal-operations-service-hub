@@ -576,6 +576,60 @@ dd {
   margin-bottom: 16px;
   max-width: 360px;
 }
+.admin-form {
+  max-width: none;
+  width: 100%;
+}
+.admin-row-actions {
+  margin-left: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  justify-self: end;
+}
+.admin-row-actions .btn {
+  width: auto;
+}
+.admin-row {
+  display: grid !important;
+  align-items: center;
+  gap: 12px 16px;
+  min-width: 0;
+}
+.admin-row > strong,
+.admin-row > span {
+  min-width: 0 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-row-users {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) 120px minmax(0, 0.8fr) auto;
+}
+.admin-row-teams {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.admin-row-categories,
+.admin-row-priorities {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+.admin-teams {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.admin-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.admin-check input {
+  width: auto;
+}
 .simple-table {
   display: grid;
 }
@@ -727,6 +781,15 @@ dd {
   .simple-table > div > *:first-child {
     min-width: 0;
   }
+  .admin-row-users,
+  .admin-row-categories,
+  .admin-row-priorities,
+  .admin-row-teams {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .admin-row > span {
+    grid-column: 1 / -2;
+  }
 }
 
 .modal-backdrop {
@@ -739,7 +802,15 @@ dd {
   background: rgba(28, 25, 23, 0.45);
 }
 .modal-card {
-  width: min(560px, 100%);
+  width: min(420px, 100%);
   max-height: calc(100vh - 48px);
   overflow: auto;
+}
+.admin-modal-shell {
+  width: min(540px, calc(100vw - 48px));
+}
+.modal-card.admin-modal {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 0;
 }
