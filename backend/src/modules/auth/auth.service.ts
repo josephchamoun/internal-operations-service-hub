@@ -14,6 +14,7 @@ const SCOPES = ['openid', 'profile', 'email', 'User.Read'];
 
 export interface HubJwtPayload {
   userId: string;
+  name?: string;
   role: string;
   teamIds: string[];
 }
@@ -95,6 +96,7 @@ export class AuthService {
 
     const payload: HubJwtPayload = {
       userId: user.id,
+      name: user.name,
       role: user.role,
       teamIds,
     };
@@ -142,10 +144,21 @@ export class AuthService {
 
     const payload: HubJwtPayload = {
       userId: user.id,
+      name: user.name,
       role: user.role,
       teamIds,
     };
 
     return { accessToken: this.jwtService.sign(payload) };
+  }
+
+  async currentSession(actor: HubJwtPayload) {
+    const user = await this.usersService.findOne(actor.userId);
+    return {
+      userId: user.id,
+      name: user.name,
+      role: user.role,
+      teamIds: actor.teamIds,
+    };
   }
 }

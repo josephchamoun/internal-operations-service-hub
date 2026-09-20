@@ -443,6 +443,21 @@ dd {
   display: grid;
   gap: 16px;
 }
+.intake-form {
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px 40px;
+  align-items: start;
+}
+.intake-col {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.intake-col:last-child {
+  padding-left: 40px;
+  border-left: 1px solid var(--line);
+}
 .form textarea {
   resize: vertical;
 }
@@ -1010,6 +1025,15 @@ dd {
   .detail-grid,
   .full-request-layout {
     grid-template-columns: 1fr;
+  }
+  .intake-form {
+    grid-template-columns: 1fr;
+  }
+  .intake-col:last-child {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
   }
   .full-request-side {
     position: static;

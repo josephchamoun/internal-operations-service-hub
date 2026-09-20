@@ -127,6 +127,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
       .expect(200);
     expect(me.body.role).toBe('team_member');
     expect(me.body.teamIds).toEqual(['IT']);
+    expect(me.body.name).toBeTruthy();
 
     const claimed = await request(app.getHttpServer())
       .patch(`/requests/${created.body.id}/claim`)

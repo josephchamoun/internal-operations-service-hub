@@ -24,7 +24,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
         <div className="identity">
           <span className="identity-chip">
-            <strong>{user?.userId}</strong>
+            <strong>{user?.name || user?.userId}</strong>
             <em>{user?.role?.replace("_", " ")}</em>
           </span>
           <Button className="quiet" onClick={() => logout()}>

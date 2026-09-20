@@ -24,7 +24,13 @@ function decodeToken(token: string): CurrentUser {
       .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
       .join(""),
   );
-  return JSON.parse(json) as CurrentUser;
+  const parsed = JSON.parse(json) as CurrentUser;
+  return {
+    userId: parsed.userId,
+    name: parsed.name,
+    role: parsed.role,
+    teamIds: parsed.teamIds ?? [],
+  };
 }
 
 function restoreSession(): { token: string | null; user: CurrentUser | null } {

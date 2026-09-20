@@ -3,6 +3,7 @@ export type RequestStatus = "New" | "In Progress" | "Resolved" | "Cancelled";
 
 export interface CurrentUser {
   userId: string;
+  name?: string;
   role: Role;
   teamIds: string[];
 }

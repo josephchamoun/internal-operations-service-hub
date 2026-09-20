@@ -54,6 +54,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() actor: HubJwtPayload) {
-    return actor;
+    return this.authService.currentSession(actor);
   }
 }

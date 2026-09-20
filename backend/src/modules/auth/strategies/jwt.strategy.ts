@@ -31,6 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const memberships = await this.teamMembershipsService.listByUserId(user.id);
     return {
       userId: user.id,
+      name: user.name,
       role: user.role,
       teamIds: memberships.map((item) => item.teamId),
     };
