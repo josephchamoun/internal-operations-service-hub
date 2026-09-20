@@ -1,7 +1,13 @@
 import { BadGatewayException, ServiceUnavailableException } from '@nestjs/common';
 import { IntakeAiService } from './intake-ai.service';
 import { evalCatalog, intakeEvalCases } from './intake-ai.eval-cases';
-import { normalizeInterpretation } from './normalize-interpretation';
+import { buildSystemPrompt } from './build-prompts';
+import {
+  defaultNextStep,
+  fallbackCategoryId,
+  normalizeInterpretation,
+} from './normalize-interpretation';
+import { IntakeCatalog } from './intake-ai.types';
 
 describe('AI intake eval cases', () => {
   it.each(intakeEvalCases.filter((item) => item.kind !== 'invalid-output'))(
@@ -72,5 +78,54 @@ describe('AI intake eval cases', () => {
     await expect(service.interpret('my laptop is shut down and wont open')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
+  });
+});
+
+const facilitiesCatalog: IntakeCatalog = {
+  categories: [
+    { id: 'badge-access', name: 'Badge Access', defaultTeamId: 'Facilities' },
+    { id: 'misc', name: 'Misc', defaultTeamId: null },
+  ],
+  teams: [{ id: 'Facilities', name: 'Facilities' }],
+  priorities: [{ id: 'Standard', name: 'Standard' }],
+};
+
+describe('intake catalog is not hardcoded to seed IT/HR', () => {
+  it('builds the prompt from whatever catalog is passed in', () => {
+    const prompt = buildSystemPrompt(facilitiesCatalog);
+    expect(prompt).toContain('badge-access: Badge Access');
+    expect(prompt).toContain('Facilities');
+    expect(prompt).toContain('misc');
+    expect(prompt).not.toMatch(/laptop-issue/);
+    expect(prompt).not.toMatch(/\bIT or HR\b/);
+    expect(prompt).not.toMatch(/hr-approval/);
+  });
+
+  it('maps invented category ids to the catch-all in that catalog', () => {
+    const result = normalizeInterpretation(
+      'Please open a payroll ticket for my missing bonus',
+      {
+        summary: 'Missing bonus',
+        categoryId: 'payroll',
+        priorityId: 'Critical',
+        suggestedOwningTeamId: 'Finance',
+        needsClarification: false,
+        confidence: 'high',
+      },
+      facilitiesCatalog,
+    );
+    expect(result.categoryId).toBe('misc');
+    expect(result.categoryId).toBe(fallbackCategoryId(facilitiesCatalog));
+    expect(result.priorityId).toBe('Standard');
+    expect(result.suggestedOwningTeamId).toBeNull();
+    expect(result.needsClarification).toBe(true);
+  });
+
+  it('writes next-step copy from catalog names, not seed ids', () => {
+    const step = defaultNextStep(facilitiesCatalog, 'badge-access', 'Facilities', false);
+    expect(step).toContain('Badge Access');
+    expect(step).toContain('Facilities');
+    expect(step).not.toMatch(/\bIT\b/);
+    expect(step).not.toMatch(/\bHR\b/);
   });
 });
