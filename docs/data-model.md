@@ -116,7 +116,7 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 
 A row existing means that user currently has that request silenced. Un-silencing deletes the row.
 
-**AccessLog:** records every time someone other than the requester — the owning team or the Admin — opens a request's full details, since the system cannot tell a correctly-routed view from a misrouted one at the point of viewing. The requester's own full-detail views are not logged.
+**AccessLog:** records when someone other than the requester — the owning team or the Admin — opens a request's full details, since the system cannot tell a correctly-routed view from a misrouted one at the point of viewing. The requester's own full-detail views are not logged. A later open of the same request by the same user within one hour does not insert another row; after that window, a new row is written.
 
 | Field       | Type          | Notes |
 | ----------- | ------------- | ----- |
@@ -125,7 +125,7 @@ A row existing means that user currently has that request silenced. Un-silencing
 | request_id  | FK to Request |       |
 | accessed_at | timestamp     |       |
 
-Each access creates its own row, so the same user opening the same request more than once produces multiple entries rather than overwriting the first.
+Each access that is outside the one-hour window for that user and request creates its own row, so later opens still produce a history rather than overwriting the first. Opens inside the window do not add a row.
 
 ### 1.2 Relationships and cardinality
 
@@ -151,7 +151,7 @@ Every entity other than Team, Category, and Priority (which the Admin owns direc
 
 ### 2.1 Request status transitions
 
-A request starts in the New status. From there, the owning team can move it into In Progress, typically once someone on the team claims it, though claiming and changing the status are two separate actions. Once a request is claimed, only the claimant can move it forward, and only the owning team can ever move a request into the Resolved status, never the requester. Separately, while a request is still New or In Progress, the requester can move it into the Cancelled status themselves. Resolved and Cancelled are both terminal; nothing can move a request out of either status once it has reached one of them.
+A request starts in the New status. From there, the owning team can move it into In Progress, typically once someone on the team claims it, though claiming and changing the status are two separate actions. Once a request is claimed, only the claimant can move it forward. Resolved is only allowed for a claimant who is a member of the owning team; a requester who is not on that team cannot mark it Resolved. Separately, while a request is still New or In Progress, the requester can move it into the Cancelled status themselves. Resolved and Cancelled are both terminal; nothing can move a request out of either status once it has reached one of them.
 
 ### 2.2 Claim invariant
 
@@ -159,7 +159,7 @@ At most one claimed_by value exists per request at any time. While claimed, only
 
 ### 2.3 Reassignment
 
-Any member of the current owning team can reassign a request to a different team. This updates owning_team_id, clears claimed_by so the previous claim does not carry over to the new team, and sets status back to New if it had been In Progress, so the new team receives it as an unclaimed New request. It writes a reassigned event recording the old and new team, plus a status_change event when status was reverted, without touching any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
+Any member of the current owning team can reassign a request to a different team. This updates owning_team_id, clears claimed_by so the previous claim does not carry over to the new team, and sets status back to New if it had been In Progress, so the new team receives it as an unclaimed New request. If no category is supplied on the reassignment, the category is set to Other. It writes a reassigned event recording the old and new team, plus a status_change event when status was reverted, without touching any existing message or attachment. There is no dedicated loop detection. The full reassignment trail is already visible through the request's own timeline to anyone with access to it, including the Admin.
 
 ### 2.4 Escalation
 
@@ -177,7 +177,7 @@ Messages follow a different restriction, tied to the terminal statuses rather th
 
 These rules are enforced on every read and write, not assumed from what any interface happens to show.
 
-A requester may read and write only requests where they are the requester. Subject and description may be written only while the request is New and unclaimed; after that, the requester may still cancel (from New or In Progress) but cannot edit those fields. A team member may read requests owned by any team they belong to, and may change a request's status only if they are the current claimant; an unclaimed request must be claimed first before its status can be moved. The Admin does not bypass the requester-only edit or cancel rules. Messages and attachments carry no independent access rules of their own, they follow whatever request they belong to. The Admin may read every request, but by default sees only the limited fields (category, requester, created at, and subject) unless deliberately opening the full detail, the same limited view a misrouted receiving team sees. Silence records are only readable and writable by the user they belong to. Access log entries are written automatically every time the owning team or the Admin opens a request's full detail; never for the requester's own views, and are readable only by the Admin.
+A requester may read and write only requests where they are the requester. Subject and description may be written only while the request is New and unclaimed; after that, the requester may still cancel (from New or In Progress) but cannot edit those fields. A team member may read requests owned by any team they belong to, and may change a request's status only if they are the current claimant; an unclaimed request must be claimed first before its status can be moved. The Admin does not bypass the requester-only edit or cancel rules. Messages and attachments carry no independent access rules of their own, they follow whatever request they belong to. The Admin may read every request, but by default sees only the limited fields (category, requester, created at, and subject) unless deliberately opening the full detail, the same limited view a misrouted receiving team sees. Silence records are only readable and writable by the user they belong to. Access log entries are written automatically when the owning team or the Admin opens a request's full detail, never for the requester's own views, and are readable only by the Admin. If that same person opens the same request again within one hour, the existing log row stands and no new row is written.
 
 ### 2.7 Sensitive data rule
 
@@ -205,7 +205,7 @@ Reading a request's timeline, its status changes, claims, unclaims, and reassign
 
 The escalation scheduler periodically finds every request that is still New and unclaimed, then checks how long it has been since the last reminder, against that request's priority escalation window.
 
-The Admin runs the same kind of search a team member does, but without being limited to one team, filtering across any combination of team, category, or status.
+The Admin runs the same kind of filtered list a team member does, but without being limited to one team, filtering across any combination of team, category, or status.
 
 Checking whether a specific person has silenced a specific request is a quick lookup by that person and that request together, run once per candidate during each escalation sweep.
 
@@ -220,7 +220,7 @@ Only indexes tied to one of the queries above are included; this system's volume
 - **Message, on request and time together**: supports displaying a thread in order.
 - **TeamMembership, on team**: supports notifying every member of a team when a new request lands. No separate index was added on user, since the composite primary key on (user, team) already covers lookups by user alone.
 
-No index was added on category alone, since the Admin's cross-team search is infrequent enough that a full scan narrowed by the team and status indexes is sufficient. No full text index was added, since nothing in the requirements calls for free text search.
+No index was added on category alone, since the Admin's cross-team filter is infrequent enough that a full scan narrowed by the team and status indexes is sufficient. No full text index was added, since nothing in the requirements calls for free text search.
 
 ---
 

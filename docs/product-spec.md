@@ -45,11 +45,11 @@ The system must:
 2. Support multiple request categories at minimum: IT and HR (extensible to more categories later).
 3. Automatically route each request to the correct owner/team based on category (and sub-category where relevant, e.g., "laptop issue" → IT).
 4. Assign a status to every request (e.g., New, In Progress, Resolved, Cancelled) so nothing is silently forgotten.
-5. Only the current claimant on a request may change its status, aside from cancellation, which the requester may trigger themselves. The requester cannot mark their own request 'Resolved.' An unclaimed request must be claimed first before its status can be moved.
+5. Only the current claimant on a request may change its status, aside from cancellation, which the requester may trigger themselves. The requester cannot mark their own request Resolved unless they are also a member of the owning team and the current claimant. An unclaimed request must be claimed first before its status can be moved.
 6. Notify every member of the owning team when a new request lands in their queue, since no individual is assigned to it until someone claims it.
 7. Notify the requester when the owning team changes their request's status.
 8. Allow any member of the current owning team to reassign a request to a different team if initial routing was wrong, with the new owning team notified.
-9. Maintain a persistent, searchable record of all requests.
+9. Maintain a persistent record of all requests.
 10. Allow employees to check the status of their own submitted requests without needing to ask the owner directly.
 11. Ensure an employee can only see their **own** submitted requests and not requests submitted by other employees. Only the owning team (and the requester) can see a given request. The System Admin/Hub Owner is the one exception: they can view all requests across all categories and teams, since they are responsible for configuring routing and maintaining the hub.
 12. The system must identify who submitted each request. Team or department association for each user is assigned by the Admin inside the hub, and a user may be assigned to more than one team at once; it is not assumed to come from the identity provider, since login only confirms who someone is, not their team(s).
@@ -62,13 +62,13 @@ The system must:
 19. Allow a member of the owning team to claim a request, becoming its sole assignee. Only one team member may hold a claim on a request at a time; the rest of the team can still see it in the shared queue, marked as claimed and by whom, but cannot claim it themselves until it is unclaimed. A claimed request can be unclaimed, or the request itself reassigned to a different team. When a request becomes unclaimed, the whole owning team is notified again, the same as when it first arrived. Claiming itself does not trigger a separate notification, since the team's queue already reflects the change as it happens.
 20. Allow the requester and the owning team to exchange messages on a request at any point while it is not Resolved or Cancelled. Messages form a single ongoing thread, not limited to one exchange or tied to a specific status. Sending a message never changes the request's status on its own. The recipient side (the requester if the team sent it, the owning team if the requester sent it) is notified of a new message, since live updates alone only reach someone actively viewing the request at that moment.
 21. Allow the requester to attach files (e.g., photos, screenshots, documents) to a request at submission time, and optionally with a message. Attachments follow the exact same visibility rules as the rest of the request. Only the requester and the current owning team can view them; no other team or employee can access them. Whoever uploaded an attachment can edit or remove it only while the request is still in 'New' status and unclaimed. Once the request is claimed, or its status has moved out of New, attachments become read only, including for whoever added them.
-22. Provide a filterable view of requests by status (New, In Progress, Resolved, Cancelled), and for owning teams, additionally filterable by category, so requesters and owning teams can find relevant requests without scanning a flat unsorted list. This filtering respects the same visibility rules as everywhere else: a requester only filters within their own requests, an owning team only filters within requests routed to them, and the Admin can filter across all requests and all categories.
+22. Provide a filterable view of requests by status (New, In Progress, Resolved, Cancelled), and for owning teams, additionally filterable by category. A user who belongs to more than one owning team can also filter the queue by team. This filtering respects the same visibility rules as everywhere else: a requester only filters within their own requests, an owning team only filters within requests routed to them, and the Admin can filter across all requests, teams, and categories.
 23. The System Admin must be able to assign each user's role within the hub (employee, member of one or more owning teams such as IT or HR, admin). This is independent of whatever team or department an external identity system may report; the hub's own role determines what someone can actually do inside the hub.
 24. A user who holds an owning-team role can still submit requests as a regular employee. This holds regardless of how many teams the user belongs to. The category chosen determines the single owning team for that request, independent of the submitter's own team memberships. A member of one owning team (e.g., IT) submitting a request that belongs to a different team (e.g., HR) is routed there exactly as it would be for anyone else.
 25. Allow each team member to silence escalation reminders for a specific request individually, for cases where they've seen it and are deliberately holding off rather than having forgotten it. Silencing only affects that one person; it does not silence the reminder for the rest of the owning team, so the system keeps notifying anyone on the team who hasn't silenced it themselves. A silenced request stops reminding that specific person until they un-silence it, or until they claim or reassign it, at which point normal escalation rules apply again for them.
 26. The Admin defines a fixed list of priority levels (e.g. Low, Normal, Urgent), each with its own default escalation window. The requester picks one from that list at submission (defaulting to Normal if left unset); any member of the owning team can change it after seeing the request, not only whoever has claimed it, since correcting an over-marked priority is often most useful right when the request lands, before anyone's claimed it yet. This follows the same pattern as category selection: a fixed, Admin-maintained list rather than free text.
 27. The escalation scheduler's check frequency and the actual reminder frequency are independent. The scheduler may check for stale requests often (e.g. every couple of hours) without reminding the team that often; a reminder for a given request only goes out once the priority level's escalation window has elapsed since the last reminder for that request.
-28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
+28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. Repeat opens of the same request by the same person within one hour do not create another log row, and the confirmation prompt is not shown again in that window. After an hour, both the prompt and a new log row apply again. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
 29. Before a request is saved, the requester may paste free text and ask the hub for an advisory intake suggestion. The backend sends only that draft plus the Admin-defined category, team, and priority lists to a language model. The model returns structured JSON. The backend validates every product-owned value against those lists and builds the response the requester sees (summary, request type, category, priority, owning team, suggested next step, optional self-serve hint, clarification if the text is thin or ambiguous). The suggestion never creates the request. The requester can edit or ignore it and still submit through the existing form. If the provider is down or returns unreadable output, submission still works without the suggestion.
 
 ## 5. Non-Functional Requirements
@@ -150,6 +150,9 @@ Given a submitted request with category X, when it is created, then it appears o
 **Reassignment moves the request and notifies**
 Given a request currently owned by Team A, when any member of Team A reassigns it to Team B, then it moves out of Team A's queue, into Team B's queue, and Team B is notified as if it were newly submitted.
 
+**Omitted category on reassignment becomes Other**
+Given a request is reassigned to a new team without a new category, when the change completes, then its category is Other.
+
 **History survives reassignment**
 Given a request is reassigned, when the change completes, then the request's history/timestamp from before the reassignment is preserved (not reset or lost).
 
@@ -217,16 +220,19 @@ Given the escalation scheduler runs on a fixed check interval (e.g., every coupl
 
 ---
 
-#### Records, Traceability & Search
+#### Records, Traceability & Filtering
 
 **Full audit trail retained**
 Given any request ever submitted, when queried later, then a persistent record exists with who submitted it, when, what it was routed to, and its status history over time.
 
-**Search within permitted scope**
-Given the Admin or an owning team searches within their permitted scope, when they enter search terms, then matching requests are returned without needing to scan a full unsorted list.
+**Filter within permitted scope**
+Given the Admin or an owning team views the request list within their permitted scope, when they apply status, category, or team filters, then matching requests are returned without needing to scan a full unsorted list.
 
 **Out-of-team full-view access is logged**
-Given a request's full details are opened by the owning team or the Admin (not the requester), when that access occurs, then it is logged with who accessed it and when."
+Given a request's full details are opened by the owning team or the Admin (not the requester), when that access occurs, then it is logged with who accessed it and when.
+
+**Repeat full-view access within an hour is not re-logged**
+Given that person already opened that request's full details, when they open it again within one hour, then no additional access log row is written and they are not asked to confirm again. After that hour, a new confirmation and a new log row apply.
 
 **Access log visible only to Admin**
 Given such an access log entry exists, when anyone other than the Admin attempts to view it, then they cannot; only the Admin can see this log.
@@ -248,7 +254,7 @@ Given a user submits credentials on the login screen, when the hub checks them, 
 Given the identity provider is unreachable, slow, or returns an error, when a user attempts to log in, then login is blocked and a clear error is shown, rather than the hub guessing at who the person is.
 
 **No access without a session**
-Given a user has not logged in, when they attempt to view any request, queue, or search result, then access is denied.
+Given a user has not logged in, when they attempt to view any request, queue, or filtered list, then access is denied.
 
 **Login does not grant a team or role by itself**
 Given a user successfully logs in through the identity provider, when their session starts, then their role and team membership come only from the Admin's assignment inside the hub, never from anything the identity provider reports.
@@ -261,7 +267,7 @@ Given a user successfully logs in through the identity provider, when their sess
 Given an employee is logged in, when they view their request list, then they see only requests they personally submitted.
 
 **Cross-employee access denied**
-Given an employee attempts to view another employee's request by any means (direct link, search, filter), when they try, then access is denied.
+Given an employee attempts to view another employee's request by any means (direct link, filter), when they try, then access is denied.
 
 **Team members see only requests routed to their teams**
 Given an owning-team member views their queue, when they look at requests, then they see only requests routed to any team they belong to, not requests routed to teams they are not a member of.
@@ -375,7 +381,7 @@ Given a request's priority level, when its escalation window is calculated, then
 ### Incorrect / failure behavior examples (what must NOT happen)
 
 - _Failure 1 (Silent loss):_ An employee submits a request and it never appears in any team's queue. No notification, no record, no status. This is the exact problem the system exists to prevent, so it's a critical failure if it ever happens.
-- _Failure 2 (Wrong visibility):_ An employee can see another employee's HR request through the requests list or search. This is a serious privacy failure, not just a bug, it would break trust in the system entirely.
+- _Failure 2 (Wrong visibility):_ An employee can see another employee's HR request through the requests list. This is a serious privacy failure, not just a bug, it would break trust in the system entirely.
 - _Failure 3 (Self-resolving):_ A requester is able to mark their own request as "Resolved" without the owning team ever acting on it. This makes status meaningless and requests could get closed without actually being handled.
 - _Failure 4 (Stuck request):_ A request sits in "New" status indefinitely with no notification ever sent to the owning team, and the requester has no way to find out anything is wrong. This recreates the original problem (forgotten requests) inside the new system.
 - _Failure 5 (Load failure):_ Multiple employees submit requests at the same time (e.g., during a company-wide outage, many people report "my laptop isn't working" simultaneously) and some requests get dropped, duplicated, or routed to the wrong team because the system couldn't handle concurrent submissions.

@@ -30,7 +30,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Intake suggestion (advisory).** A narrow helper used only before a request exists. The backend sends the employee's free-text draft plus the current category, team, and priority lists to an external language model, then rebuilds a structured suggestion the employee can accept, edit, or ignore. The model never writes a request row. Product-owned values (category, team, priority) are checked against the database after the model replies.
 
-**Database.** The persistent, searchable record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry each time someone other than the requester — the owning team or the Admin — opens a request's full details, recording who and when. The requester's own views are not logged. This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
+**Database.** The persistent record of everything: every request, its full status history, replies, attachments, and priority level. It also holds a small access log: an entry when someone other than the requester — the owning team or the Admin — opens a request's full details, recording who and when. Repeat opens of the same request by the same person within one hour reuse that existing entry rather than writing another. The requester's own views are not logged. This is what makes the system trustworthy as a source of truth rather than a set of scattered messages.
 
 **Notification dispatcher.** Turns internal events, like a new request arriving, a status changing, or a message being sent, into an outbound notification. It works independently of the request-writing process, so a slow or failed notification never holds up or undoes the request itself.
 
@@ -40,7 +40,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Company identity provider.** An existing system the company already runs for logging people in. The hub relies on it purely to authenticate who someone is; it isn't assumed to also report their team or department, since that varies by provider and isn't something the hub should depend on. If this is unreachable, slow, or returns anything uncertain, the hub blocks login and submission rather than guess.
 
-**External notification channel.** Whichever tool employees already use day to day, such as email or a chat platform, still undecided. The hub hands notifications off to it. If it's unreachable or rejects a message, the request itself is unaffected. Only the notification is queued and retried.
+**External notification channel.** Whichever tool employees already use day to day, such as email or a chat platform, still undecided. The hub hands notifications off to it. If it's unreachable or rejects a message, the request itself is unaffected. The send is retried a few times in-process (three attempts) and then dropped; there is no durable outbox.
 
 **Language-model provider (optional).** Used only for the pre-submit intake suggestion. Today that is Groq's free chat API. If it is unreachable, slow, or returns unreadable output, the employee still submits by filling the form themselves. No other request-lifecycle action depends on it.
 
@@ -50,7 +50,7 @@ No courier, payment processor, or equipment-tracking tool is connected to this h
 
 - An employee logs in, which the login screen verifies against the identity provider. They can paste a free-text draft; the backend asks the language-model provider for a structured suggestion, validates it against the Admin-defined lists, and returns that candidate. The employee then submits a request through the client (using the suggestion or filling the form themselves), picking a category from the Admin-defined list, or "Other" with a team picked directly if none fit. That request goes straight to the backend, which validates it, saves it to the database with its status set to New, routes it to the right team based on the category chosen, and tells the notification dispatcher to alert every member of that team, since no individual is assigned to it yet.
 
-- While a request is open, the backend pushes live updates to anyone currently viewing it, whether that's the requester or the owning team, whenever the status changes, a message is sent, or the request is claimed or unclaimed.
+- While a request is open, the backend pushes live updates to anyone currently viewing it, whether that's the requester or the owning team, whenever the request is created, the status changes (including cancel), a message is sent, the request is claimed or unclaimed, it is reassigned, or its priority changes.
 
 - When the owning team changes a request's status, the backend checks that the person making the change actually belongs to that team, saves the change, notifies the requester, and pushes the update live to anyone watching.
 
@@ -81,7 +81,7 @@ This isn't something drawn as its own box in the diagram. It's a rule the backen
 
 - For a request that was routed to the wrong team and contains sensitive information, the receiving team can see enough to recognize it doesn't belong to them, like the category, who submitted it, when, and a short subject line, without the backend requiring them to open the full details first. Choosing to open it anyway is a human decision the system can't prevent.
 
-- Opening a request's full details is logged when the viewer is not the requester (owning-team member or Admin). That does not prevent the access; it only records who opened it and when, because the system cannot tell a correctly-routed view from a misrouted one at that moment. The requester's own views are not logged. The log is visible only to the Admin. Someone with no relationship to the request cannot open it at all, not even the limited view.
+- Opening a request's full details is logged when the viewer is not the requester (owning-team member or Admin). That does not prevent the access; it only records who opened it and when, because the system cannot tell a correctly-routed view from a misrouted one at that moment. The same person opening the same request again within one hour is not logged again and is not asked to confirm again. The requester's own views are not logged. The log is visible only to the Admin. Someone with no relationship to the request cannot open it at all, not even the limited view.
 
 ### 3.2 Failure scenarios
 
@@ -97,7 +97,7 @@ Each piece below lists what can go wrong and what the system does about it.
 
 - **Company identity provider**: unreachable, slow, or returns an error. Login and submission stay blocked rather than the system guessing who someone is.
 
-- **Notification dispatcher**: fails, errors, or is unreachable. The request stays saved as normal; the notification is queued and retried separately.
+- **Notification dispatcher**: fails, errors, or is unreachable. The request stays saved as normal; the notification is retried a few times in-process and then dropped.
 
 - **External notification channel**: unreachable, rejects the message, or times out. Same response as above, the request is unaffected either way.
 
@@ -113,9 +113,9 @@ The connections between these pieces can fail on their own too, even if both sid
 
 - **Login to identity provider**: times out, errors, or returns something invalid. Treated the same as the provider being down, login stays blocked.
 
-- **Backend to notification dispatcher**: call fails. The request stays saved regardless; only the notification is retried.
+- **Backend to notification dispatcher**: call fails. The request stays saved regardless; only the notification is retried in-process.
 
-- **Notification dispatcher to external channel**: send fails, times out, or is rejected. Retried on its own, never touches the already-saved request.
+- **Notification dispatcher to external channel**: send fails, times out, or is rejected. Retried a few times on its own, never touches the already-saved request.
 
 - **Backend to client, the live update connection**: drops or stalls. The browser reconnects automatically, and opening a request always fetches the current state fresh rather than trusting the last thing it received.
 

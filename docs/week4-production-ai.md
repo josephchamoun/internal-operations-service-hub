@@ -23,7 +23,7 @@ GROQ_MODEL=openai/gpt-oss-20b
 
 Sent: the draft, plus the current Admin-defined category, team, and priority lists (ids and names only).
 
-Not sent: other requests, users, emails, JWTs, access logs, or the rest of the spec.
+Not sent: other requests, users, emails, JWTs, access logs, or the rest of the spec. Access-log debounce (one row per person per request per hour) is hub-side only and is never part of the model prompt.
 
 ## Structured result the backend returns
 
