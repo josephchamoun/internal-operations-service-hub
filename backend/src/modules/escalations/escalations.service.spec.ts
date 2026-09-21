@@ -30,7 +30,9 @@ describe('EscalationsService', () => {
       }),
     };
     silencesRepo = { listUserIds: jest.fn().mockResolvedValue(['dev-manager']) };
-    notificationsService = { notifyTeamExcept: jest.fn() };
+    notificationsService = {
+      notifyTeamExcept: jest.fn().mockResolvedValue({ recipients: 1, sent: 1 }),
+    };
     service = new EscalationsService(
       { get: () => '0' } as any,
       requestsRepo,
@@ -64,6 +66,19 @@ describe('EscalationsService', () => {
       expect.any(String),
       expect.any(String),
     );
+    expect(
+      notificationsService.notifyTeamExcept.mock.invocationCallOrder[0],
+    ).toBeLessThan(requestEventsService.append.mock.invocationCallOrder[0]);
+  });
+
+  it('does not record a reminder when every intended recipient failed to send', async () => {
+    notificationsService.notifyTeamExcept.mockResolvedValue({
+      recipients: 2,
+      sent: 0,
+    });
+    const result = await service.runSweep(new Date('2026-09-02T01:00:00.000Z'));
+    expect(result.reminded).toEqual([]);
+    expect(requestEventsService.append).not.toHaveBeenCalled();
   });
 
   it('uses the last reminder time, not createdAt, for the next window', async () => {

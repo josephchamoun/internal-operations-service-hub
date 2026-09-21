@@ -22,6 +22,15 @@ export class UsersService {
     return this.repo.findAll();
   }
 
+  async findDirectory(): Promise<{ id: string; name: string; email: string }[]> {
+    const users = await this.repo.findAll();
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    }));
+  }
+
   async findOne(id: string): Promise<UserEntity> {
     const found = await this.repo.findById(id);
     if (!found) throw new NotFoundException(`User ${id} not found`);

@@ -55,6 +55,17 @@ export class EscalationsService implements OnModuleInit, OnModuleDestroy {
       const windowMs = priority.escalationWindowMinutes * 60 * 1000;
       if (elapsedMs < windowMs) continue;
 
+      const silenced = await this.silencesRepo.listUserIds(request.id);
+      const result = await this.notificationsService.notifyTeamExcept(
+        request.owningTeamId,
+        silenced,
+        `Reminder: ${request.subject} is still unclaimed`,
+        `This request is still New and unclaimed.\n\nSubject: ${request.subject}`,
+      );
+      if (result.recipients > 0 && result.sent === 0) {
+        continue;
+      }
+
       await this.requestEventsService.append({
         requestId: request.id,
         eventType: RequestEventType.ESCALATION_REMINDER,
@@ -62,14 +73,6 @@ export class EscalationsService implements OnModuleInit, OnModuleDestroy {
         fromValue: null,
         toValue: null,
       });
-
-      const silenced = await this.silencesRepo.listUserIds(request.id);
-      void this.notificationsService.notifyTeamExcept(
-        request.owningTeamId,
-        silenced,
-        `Reminder: ${request.subject} is still unclaimed`,
-        `This request is still New and unclaimed.\n\nSubject: ${request.subject}`,
-      );
       reminded.push(request.id);
     }
 

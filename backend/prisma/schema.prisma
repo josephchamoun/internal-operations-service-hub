@@ -74,7 +74,7 @@ model User {
   userId        String   @id @map("user_id")
   idpSubjectId  String?   @unique @map("idp_subject_id")
   name          String
-  email         String
+  email         String   @unique
   role          UserRole
   createdAt     DateTime @map("created_at")
 

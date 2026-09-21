@@ -41,31 +41,28 @@ export class RequestsService {
     private readonly liveUpdatesService: LiveUpdatesService,
   ) {}
 
-  findAll(actor: HubJwtPayload): Promise<RequestEntity[]> {
-    if (actor.role === 'admin') {
-      return this.repo.findAll();
-    }
-
-    if (actor.teamIds.length > 0) {
-      return this.repo
-        .findAll()
-        .then((all) => all.filter((r) => actor.teamIds.includes(r.owningTeamId)));
-    }
-
-    return this.repo
-      .findAll()
-      .then((all) => all.filter((r) => r.requesterId === actor.userId));
+  findAll(actor: HubJwtPayload): Promise<RequestSummary[]> {
+    return this.visibleRequests(actor).then((all) => all.map(toSummary));
   }
 
-  findMine(actor: HubJwtPayload): Promise<RequestEntity[]> {
-    return this.repo.findAll().then((all) => all.filter((r) => r.requesterId === actor.userId));
+  findMine(actor: HubJwtPayload): Promise<RequestSummary[]> {
+    return this.repo
+      .findAll()
+      .then((all) => all.filter((r) => r.requesterId === actor.userId).map(toSummary));
   }
 
   async findOne(id: string, actor: HubJwtPayload): Promise<RequestSummary> {
     const request = await this.requireRequest(id);
     this.assertCanView(request, actor);
-    const { description, ...summary } = request;
-    return summary;
+    const summary = toSummary(request);
+    if (request.requesterId === actor.userId) {
+      return { ...summary, lastFullAccessAt: null };
+    }
+    const latest = await this.accessLogsService.findLatestForUserRequest(
+      actor.userId,
+      request.id,
+    );
+    return { ...summary, lastFullAccessAt: latest?.accessedAt ?? null };
   }
 
   async findFullDetails(id: string, actor: HubJwtPayload): Promise<RequestEntity> {
@@ -118,6 +115,13 @@ export class RequestsService {
     };
 
     const created = await this.repo.create(entity);
+    this.liveUpdatesService.emit(
+      created.id,
+      created.owningTeamId,
+      created.requesterId,
+      'created',
+      { subject: created.subject },
+    );
     void this.notificationsService.notifyTeam(
       created.owningTeamId,
       `New request: ${created.subject}`,
@@ -242,6 +246,16 @@ export class RequestsService {
       throw new ForbiddenException('Only the current claimant can change this request\'s status');
     }
 
+    if (
+      dto.status === RequestStatus.RESOLVED &&
+      request.requesterId === actor.userId &&
+      !actor.teamIds.includes(request.owningTeamId)
+    ) {
+      throw new ForbiddenException(
+        'The requester cannot mark this request as Resolved',
+      );
+    }
+
     const updated = (await this.repo.update(id, { status: dto.status })) as RequestEntity;
     await this.requestEventsService.append({
       requestId: id,
@@ -285,6 +299,13 @@ export class RequestsService {
       fromValue: request.status,
       toValue: RequestStatus.CANCELLED,
     });
+    this.liveUpdatesService.emit(
+      id,
+      updated.owningTeamId,
+      updated.requesterId,
+      'status_changed',
+      { status: RequestStatus.CANCELLED },
+    );
     return updated;
   }
 
@@ -355,6 +376,23 @@ export class RequestsService {
     await this.repo.clearSilence(id, actor.userId);
     await this.recordReturnToNew(updated, actor, previousStatus);
 
+    this.liveUpdatesService.emit(
+      id,
+      previousTeamId,
+      updated.requesterId,
+      'reassigned',
+      { owningTeamId: updated.owningTeamId },
+    );
+    if (updated.owningTeamId !== previousTeamId) {
+      this.liveUpdatesService.emit(
+        id,
+        updated.owningTeamId,
+        updated.requesterId,
+        'reassigned',
+        { owningTeamId: updated.owningTeamId },
+      );
+    }
+
     void this.notificationsService.notifyTeam(
       updated.owningTeamId,
       `New request: ${updated.subject}`,
@@ -394,6 +432,14 @@ export class RequestsService {
       fromValue: previousPriorityId,
       toValue: dto.priorityId,
     });
+
+    this.liveUpdatesService.emit(
+      id,
+      updated.owningTeamId,
+      updated.requesterId,
+      'priority_changed',
+      { priorityId: dto.priorityId },
+    );
 
     return updated;
   }
@@ -456,4 +502,19 @@ export class RequestsService {
       throw new ForbiddenException('You do not have access to this request');
     }
   }
+
+  private async visibleRequests(actor: HubJwtPayload): Promise<RequestEntity[]> {
+    const all = await this.repo.findAll();
+    if (actor.role === 'admin') return all;
+    if (actor.teamIds.length > 0) {
+      return all.filter((r) => actor.teamIds.includes(r.owningTeamId));
+    }
+    return all.filter((r) => r.requesterId === actor.userId);
+  }
+}
+
+function toSummary(request: RequestEntity): RequestSummary {
+  const { description, ...summary } = request;
+  void description;
+  return summary;
 }

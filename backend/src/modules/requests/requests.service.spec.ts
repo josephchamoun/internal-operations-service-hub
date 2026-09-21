@@ -274,3 +274,69 @@ describe('RequestsService — edit details rule', () => {
     expect(mockRepo.update).not.toHaveBeenCalled();
   });
 });
+
+describe('RequestsService — list summaries and resolve rule', () => {
+  let service: RequestsService;
+  let mockRepo: any;
+  let mockAccessLogsService: any;
+  let mockLiveUpdatesService: any;
+  let mockRequestEventsService: any;
+
+  beforeEach(() => {
+    mockRepo = { findAll: jest.fn(), findById: jest.fn(), update: jest.fn() };
+    mockAccessLogsService = { findLatestForUserRequest: jest.fn() };
+    mockLiveUpdatesService = { emit: jest.fn() };
+    mockRequestEventsService = { append: jest.fn() };
+    service = new RequestsService(
+      mockRepo,
+      {} as any,
+      {} as any,
+      {} as any,
+      mockRequestEventsService,
+      mockAccessLogsService,
+      { notifyTeam: jest.fn(), notifyUser: jest.fn() } as any,
+      mockLiveUpdatesService,
+    );
+  });
+
+  it('strips description from list results', async () => {
+    mockRepo.findAll.mockResolvedValue([
+      {
+        id: 'req1',
+        requesterId: 'dev-employee',
+        owningTeamId: 'IT',
+        subject: 'Laptop',
+        description: 'secret',
+        status: RequestStatus.NEW,
+      },
+    ]);
+    const admin = { userId: 'admin', role: 'admin', teamIds: [] };
+    const result = await service.findAll(admin as any);
+    expect(result[0]).not.toHaveProperty('description');
+    expect(result[0].subject).toBe('Laptop');
+  });
+
+  it('rejects Resolve from a requester who is not on the owning team', async () => {
+    mockRepo.findById.mockResolvedValue({
+      id: 'req1',
+      requesterId: 'dev-employee',
+      owningTeamId: 'IT',
+      claimedBy: 'dev-employee',
+      status: RequestStatus.IN_PROGRESS,
+      subject: 'Laptop',
+    });
+    const requester = {
+      userId: 'dev-employee',
+      role: 'employee',
+      teamIds: [],
+    };
+    await expect(
+      service.updateStatus(
+        'req1',
+        { status: RequestStatus.RESOLVED },
+        requester as any,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
+  });
+});

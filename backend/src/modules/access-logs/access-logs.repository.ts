@@ -33,6 +33,17 @@ export class AccessLogsRepository {
     });
     return rows.map(toEntity);
   }
+
+  async findLatestForUserRequest(
+    userId: string,
+    requestId: string,
+  ): Promise<AccessLogEntity | undefined> {
+    const row = await this.prisma.accessLog.findFirst({
+      where: { userId, requestId },
+      orderBy: { accessedAt: 'desc' },
+    });
+    return row ? toEntity(row) : undefined;
+  }
 }
 
 function toEntity(row: AccessLog): AccessLogEntity {

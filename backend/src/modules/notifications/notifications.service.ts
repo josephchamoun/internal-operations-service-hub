@@ -43,7 +43,7 @@ export class NotificationsService {
    * transient Mailtrap/SMTP blip; after the last attempt we log and stop.
    * There is no durable outbox — that belongs to a later production queue.
    */
-  private async send(to: string, subject: string, body: string): Promise<void> {
+  private async send(to: string, subject: string, body: string): Promise<boolean> {
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -53,13 +53,13 @@ export class NotificationsService {
           subject,
           text: body,
         });
-        return;
+        return true;
       } catch (err) {
         if (attempt === maxAttempts) {
           this.logger.error(
             `Failed to send notification to ${to} after ${maxAttempts} attempts: ${err}`,
           );
-          return;
+          return false;
         }
         this.logger.warn(
           `Notification to ${to} failed (attempt ${attempt}/${maxAttempts}); retrying`,
@@ -67,6 +67,7 @@ export class NotificationsService {
         await this.delay(400 * attempt);
       }
     }
+    return false;
   }
 
   async notifyUser(userId: string, subject: string, body: string): Promise<void> {
@@ -83,16 +84,22 @@ export class NotificationsService {
     exceptUserIds: string[],
     subject: string,
     body: string,
-  ): Promise<void> {
+  ): Promise<{ recipients: number; sent: number }> {
     const skip = new Set(exceptUserIds);
     const memberships = await this.teamMembershipsService.findByTeamId(teamId);
+    let recipients = 0;
+    let sent = 0;
 
     for (const m of memberships) {
       if (skip.has(m.userId)) continue;
+      recipients += 1;
       const user = await this.usersService.findOne(m.userId);
-      await this.send(user.email, subject, body);
+      const ok = await this.send(user.email, subject, body);
+      if (ok) sent += 1;
       await this.delay(300); // stay under the sandbox's per-second rate limit
     }
+
+    return { recipients, sent };
   }
 
     private delay(ms: number): Promise<void> {

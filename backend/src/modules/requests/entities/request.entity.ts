@@ -17,4 +17,6 @@ export class RequestEntity {
 
 // Everything except description, what "opening" a request shows
 // before someone chooses to go further and see full details.
-export type RequestSummary = Omit<RequestEntity, 'description'>;
+export type RequestSummary = Omit<RequestEntity, 'description'> & {
+  lastFullAccessAt?: string | null;
+};

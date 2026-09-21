@@ -201,7 +201,7 @@ The actor for every request below is whoever the `Authorization: Bearer <token>`
 | PATCH  | `/requests/:id/unclaim`  | —                                                            | Actor must be the current claimant. `400` if not currently claimed. Clears the claim and sets status back to `New` if it was `In Progress`.                                                                                     |
 | PATCH  | `/requests/:id/status`   | `{ status }`                                                 | Actor must be the current claimant. `status` is `"In Progress"` or `"Resolved"`.                                                                                                                                               |
 | PATCH  | `/requests/:id/cancel`   | —                                                            | Actor must be the requester. Only from `New` or `In Progress`.                                                                                                                                                                 |
-| PATCH  | `/requests/:id/reassign` | `{ newTeamId, categoryId? }`                                 | Actor must be a member of the current owning team. Target team must exist and differ from the current one; clears any claim and sets status back to `New` if it was `In Progress`.                                             |
+| PATCH  | `/requests/:id/reassign` | `{ newTeamId, categoryId? }`                                 | Actor must be a member of the current owning team. Target team must exist and differ from the current one; clears any claim and sets status back to `New` if it was `In Progress`. Omitted `categoryId` is stored as Other. |
 | PATCH  | `/requests/:id/priority` | `{ priorityId }`                                             | Actor must be a member of the owning team (claimant not required). `400` if the new priority is the same as the current one.                                                                                                   |
 
 ### Global rule
@@ -215,6 +215,7 @@ All actions above are blocked (`400`) on a request whose status is `Resolved` or
 | GET                                | `/request-events`                      | Admin: every event across every request. Team member: only events for requests their team(s) own. |
 | GET                                | `/access-logs`                         | Admin only — every access log entry, across every request.                                        |
 | GET                                | `/users`, `GET /users/:id`             | Admin only.                                                                                       |
+| GET                                | `/people`                              | Any authenticated user — `{ id, name, email }` for display. Roles and team memberships are omitted. |
 | `TeamMembershipsController` routes | Admin only.                            |
 | GET                                | `/teams`, `/categories`, `/priorities` | Any authenticated user — every role needs this to use the app at all.                             |
 
