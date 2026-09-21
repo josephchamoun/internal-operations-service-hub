@@ -176,6 +176,8 @@ h3 {
   box-shadow: 0 1px 2px rgb(15 23 42 / 0.12);
   transition:
     background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
     transform 0.15s;
 }
 .btn:hover:not(:disabled) {
@@ -192,6 +194,11 @@ h3 {
   color: #44403c;
   border-color: #d6d3cd;
   box-shadow: none;
+}
+.btn.secondary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 .btn.quiet {
   padding: 7px 10px;
@@ -291,7 +298,31 @@ textarea:focus {
   border-color: var(--line);
 }
 .request-row-own {
-  background: #f8f5ef;
+  background: #ecf8f4;
+  border-color: #99d6c8;
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.request-row-claimed {
+  background: #dceee8;
+  border-color: #5fb3a6;
+  box-shadow: inset 4px 0 0 var(--accent-dark);
+}
+.request-row-claimed:hover,
+.request-row-own:hover {
+  background: #cfe8e0;
+  border-color: #3d9a8c;
+}
+.mine-mark {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--accent-dark);
+  font-size: 0.7rem;
+  vertical-align: 1px;
+}
+.mine-label {
+  font-style: normal;
+  color: var(--accent-dark);
+  font-weight: 700;
 }
 .request-subject {
   display: grid;
@@ -509,7 +540,22 @@ dd {
   margin: 0;
   font-size: 0.92rem;
 }
-.empty-state {
+.request-count {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 650;
+}
+.person-name {
+  font-weight: 650;
+  text-transform: none;
+}
+.timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
   text-align: center;
   padding: 36px 12px;
   color: var(--muted);
@@ -546,6 +592,12 @@ dd {
   color: var(--accent);
   font-size: 0.85rem;
   font-weight: 600;
+}
+button.back {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
 }
 .badges {
   display: flex;

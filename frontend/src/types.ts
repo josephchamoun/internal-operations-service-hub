@@ -17,6 +17,7 @@ export interface RequestItem {
   claimedBy: string | null;
   subject: string;
   description?: string;
+  lastFullAccessAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }

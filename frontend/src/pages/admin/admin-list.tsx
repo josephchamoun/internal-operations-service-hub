@@ -161,6 +161,11 @@ export function AdminList({ type }: { type: AdminResource }) {
           onChange={(event) => setSearch(event.target.value)}
         />
         {error && !editing && <p className="form-error">{error}</p>}
+        <p className="request-count">
+          {items.length === query.data.length
+            ? `${query.data.length} ${query.data.length === 1 ? SINGULAR[type] : type}`
+            : `${items.length} out of ${query.data.length} ${type}`}
+        </p>
         <div className="simple-table">
           {items.map((item) => {
             const locked = item.id === OTHER_CATEGORY_ID;

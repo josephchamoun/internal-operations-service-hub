@@ -52,7 +52,7 @@ export function ReassignForm({
         value={teamId}
         onChange={(event) => {
           setTeamId(event.target.value);
-          setCategoryId("");
+          setCategoryId(event.target.value ? "other" : "");
         }}
       >
         <option value="">Select target team</option>
@@ -69,9 +69,7 @@ export function ReassignForm({
         onChange={(event) => setCategoryId(event.target.value)}
         disabled={!teamId}
       >
-        <option value="">
-          {teamId ? "Category (optional)" : "Pick a team first"}
-        </option>
+        {!teamId && <option value="">Pick a team first</option>}
         {teamId &&
           teamCategories.map((category) => (
             <option value={category.id} key={category.id}>
@@ -79,6 +77,10 @@ export function ReassignForm({
             </option>
           ))}
       </select>
+      <p className="muted">
+        Defaults to Other (a catch-all category). Pick a team-specific category
+        if one fits.
+      </p>
       <Button
         disabled={!teamId || action.isPending}
         onClick={() => action.mutate()}

@@ -20,8 +20,11 @@ import { ReassignForm } from "../components/reassign-form";
 import { RequestThread } from "../components/request-thread";
 import { SilenceToggle } from "../components/silence-toggle";
 import { TestEscalationButton } from "../components/test-escalation-button";
+import { PersonLabel } from "../components/person-label";
+import { useUserDirectory } from "../hooks/use-user-directory";
+import { isWithinFullViewWindow } from "../lib/full-view-ack";
 
-const statuses: RequestStatus[] = ["New", "In Progress", "Resolved"];
+const statuses: RequestStatus[] = ["In Progress", "Resolved"];
 
 export function FullRequestPage() {
   const { id = "" } = useParams();
@@ -30,6 +33,9 @@ export function FullRequestPage() {
   const navigate = useNavigate();
   const preview = useApiQuery<RequestItem>(["request", id], `/requests/${id}`);
   const [acknowledgedFullView, setAcknowledgedFullView] = useState(false);
+  useEffect(() => {
+    setAcknowledgedFullView(false);
+  }, [id]);
   const isRequesterPreview = user?.userId === preview.data?.requesterId;
   const isOwningTeamPreview = !!user?.teamIds.includes(
     preview.data?.owningTeamId ?? "",
@@ -40,14 +46,21 @@ export function FullRequestPage() {
   const needsAccessLogWarning =
     !!preview.data && !isRequesterPreview && isAdminPreview;
   const needsConfirmBeforeFull = needsMisrouteWarning || needsAccessLogWarning;
+  const recentLoggedAccess = isWithinFullViewWindow(
+    preview.data?.lastFullAccessAt,
+  );
+  const mayFetchFull =
+    !!preview.data &&
+    (!needsConfirmBeforeFull || acknowledgedFullView || recentLoggedAccess);
   const detail = useApiQuery<RequestItem>(
     ["full-request", id],
     `/requests/${id}/full`,
-    !!preview.data && (!needsConfirmBeforeFull || acknowledgedFullView),
+    mayFetchFull,
   );
   const teams = useApiQuery<Team[]>(["teams"], "/teams");
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
   const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
+  const people = useUserDirectory();
   const [status, setStatus] = useState<RequestStatus>("In Progress");
   const [priorityId, setPriorityId] = useState("");
   const [editing, setEditing] = useState(false);
@@ -100,15 +113,19 @@ export function FullRequestPage() {
     return <Loading />;
   if (preview.isError)
     return <ErrorState error={preview.error} retry={() => preview.refetch()} />;
-  if (needsConfirmBeforeFull && !acknowledgedFullView) {
+  if (needsConfirmBeforeFull && !acknowledgedFullView && !recentLoggedAccess) {
     const request = preview.data;
     return (
       <>
         <div className="page-heading detail-title">
           <div>
-            <Link to={`/requests/${id}`} className="back">
+            <button
+              type="button"
+              className="back"
+              onClick={() => navigate(`/requests/${id}`, { replace: true })}
+            >
               ← Limited view
-            </Link>
+            </button>
             <h1>{request.subject}</h1>
           </div>
         </div>
@@ -130,11 +147,13 @@ export function FullRequestPage() {
                 <div className="detail-links">
                   <Button
                     className="secondary"
-                    onClick={() => navigate(`/requests/${id}`)}
+                    onClick={() => navigate(`/requests/${id}`, { replace: true })}
                   >
                     Go back
                   </Button>
-                  <Button onClick={() => setAcknowledgedFullView(true)}>
+                  <Button
+                    onClick={() => setAcknowledgedFullView(true)}
+                  >
                     I understand — open full details
                   </Button>
                 </div>
@@ -163,11 +182,13 @@ export function FullRequestPage() {
                 <div className="detail-links">
                   <Button
                     className="secondary"
-                    onClick={() => navigate(`/requests/${id}`)}
+                    onClick={() => navigate(`/requests/${id}`, { replace: true })}
                   >
                     Go back
                   </Button>
-                  <Button onClick={() => setAcknowledgedFullView(true)}>
+                  <Button
+                    onClick={() => setAcknowledgedFullView(true)}
+                  >
                     This is for my team — open full details
                   </Button>
                 </div>
@@ -305,14 +326,26 @@ export function FullRequestPage() {
                   request.categoryId}
               </dd>
               <dt>Requester</dt>
-              <dd>{request.requesterId}</dd>
+              <dd>
+                <PersonLabel
+                  userId={request.requesterId}
+                  users={people.data}
+                  currentUserId={user?.userId}
+                />
+              </dd>
               <dt>Owning team</dt>
               <dd>
                 {teams.data?.find((item) => item.id === request.owningTeamId)?.name ??
                   request.owningTeamId}
               </dd>
               <dt>Claimant</dt>
-              <dd>{request.claimedBy ?? "Unclaimed"}</dd>
+              <dd>
+                <PersonLabel
+                  userId={request.claimedBy}
+                  users={people.data}
+                  currentUserId={user?.userId}
+                />
+              </dd>
             </dl>
             <div className="detail-links">
               <Link className="btn secondary" to={`/requests/${id}/events`}>
@@ -382,9 +415,16 @@ export function FullRequestPage() {
                 {isRequester && (
                   <Button
                     className="danger"
-                    onClick={() =>
-                      action.mutate({ path: `/requests/${id}/cancel` })
-                    }
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          "Cancel this request? It will stay in the system as Cancelled.",
+                        )
+                      ) {
+                        return;
+                      }
+                      action.mutate({ path: `/requests/${id}/cancel` });
+                    }}
                   >
                     Cancel request
                   </Button>

@@ -10,7 +10,7 @@ import { Card } from "../components/card";
 // real deployment. Corresponds to POST /auth/dev-login on the backend,
 // which is itself gated off when NODE_ENV=production.
 const testUsers = [
-  ["u1", "Alice Employee (Employee)"],
+  ["u1", "Joseph Chamoun (Employee)"],
   ["u2", "Ben Employee (Employee)"],
   ["it-agent-1", "Sam IT (IT team member)"],
   ["it-agent-2", "Riley IT (IT team member)"],
