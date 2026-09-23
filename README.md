@@ -77,4 +77,4 @@ No rate limiting — production-hardening, not this phase.
 
 Queue filters cover status, priority, and claim state; there is still no **category** filter on the team list (product spec item 22).
 
-Attachment **retention** (how long blobs are kept) is still unspecified in the spec, so files stay until the request does.
+

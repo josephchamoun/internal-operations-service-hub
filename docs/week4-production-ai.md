@@ -48,18 +48,18 @@ Not sent: other requests, users, emails, JWTs, access logs, or the rest of the s
 
 ## Assignment checklist
 
-| Requirement | Where |
-| --- | --- |
-| Same repo, one intake capability | `POST /requests/interpret`, New request page |
-| Free text → bounded product context | Prompt is built from Prisma category/team/priority rows |
-| Structured candidate | JSON above; backend rebuilds it in `normalize-interpretation.ts` |
-| Backend validates product-owned values | Fake ids discarded; see trusted-context eval case |
-| AI is advisory | UI pre-fills; submit is still the old form |
-| 5–8 eval cases (clear, thin, ambiguous) | `intake-ai.eval-cases.ts` |
-| Trusted context + conditional behavior | Fake `payroll`/`Finance` ids dropped; thin drafts forced to clarify |
-| Invalid output + provider failure | Unparseable text → `502`; provider error → `503` |
-| Repeatable eval command | `cd backend && npm run test:ai-eval` |
-| Normal tests stay green | `npm test` and `npm run test:e2e` |
+| Requirement                             | Where                                                               |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| Same repo, one intake capability        | `POST /requests/interpret`, New request page                        |
+| Free text → bounded product context     | Prompt is built from Prisma category/team/priority rows             |
+| Structured candidate                    | JSON above; backend rebuilds it in `normalize-interpretation.ts`    |
+| Backend validates product-owned values  | Fake ids discarded; see trusted-context eval case                   |
+| AI is advisory                          | UI pre-fills; submit is still the old form                          |
+| 5–8 eval cases (clear, thin, ambiguous) | `intake-ai.eval-cases.ts`                                           |
+| Trusted context + conditional behavior  | Fake `payroll`/`Finance` ids dropped; thin drafts forced to clarify |
+| Invalid output + provider failure       | Unparseable text → `502`; provider error → `503`                    |
+| Repeatable eval command                 | `cd backend && npm run test:ai-eval`                                |
+| Normal tests stay green                 | `npm test` and `npm run test:e2e`                                   |
 
 ## Repeatable eval command
 
@@ -85,7 +85,8 @@ This runs `src/modules/intake-ai/intake-ai.eval.spec.ts` with a **mocked** model
 - `POST /requests/interpret` — authenticated; `200` on success  
 - Frontend: `frontend/src/pages/new-request-page.tsx`
 
-## Also in this repo (same `week4/ai-assistant` branch, not part of the AI eval)
+## Also in this repo (not part of the AI eval)
 
 After intake shipped: admin CRUD; request messages and SQLite file attachments; per-user silence; escalation sweep (`ESCALATION_CHECK_INTERVAL_MS`). Run/setup is still `backend/README.md` and `frontend/README.md`. Extra e2e: `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`.
-  
+
+
