@@ -62,7 +62,7 @@ export class EscalationsService implements OnModuleInit, OnModuleDestroy {
         `Reminder: ${request.subject} is still unclaimed`,
         `This request is still New and unclaimed.\n\nSubject: ${request.subject}`,
       );
-      if (result.recipients > 0 && result.sent === 0) {
+      if (result && result.recipients > 0 && result.sent === 0) {
         continue;
       }
 

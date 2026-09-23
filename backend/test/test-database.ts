@@ -9,7 +9,7 @@ const TEST_DB_PATH = 'file:./prisma/test.db';
  * Applies the current schema to it via `prisma db push` before returning.
  */
 export function createTestDatabase(): PrismaClient {
-  execSync('npx prisma db push --skip-generate', {
+  execSync('npx prisma db push --skip-generate --accept-data-loss', {
     env: { ...process.env, DATABASE_URL: TEST_DB_PATH },
     stdio: 'ignore',
   });

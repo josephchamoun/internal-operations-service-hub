@@ -157,12 +157,6 @@ export function NewRequestPage() {
                   <dd>{suggestion.priorityId}</dd>
                   <dt>Next step</dt>
                   <dd>{suggestion.suggestedNextStep}</dd>
-                  {suggestion.selfServeHint && (
-                    <>
-                      <dt>You can try</dt>
-                      <dd>{suggestion.selfServeHint}</dd>
-                    </>
-                  )}
                 </dl>
                 {suggestion.needsClarification && (
                   <p className="notice warning">

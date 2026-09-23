@@ -33,7 +33,7 @@ describe('Silence and escalation (e2e)', () => {
     });
     await testPrisma.$disconnect();
 
-    notifyTeamExcept = jest.fn();
+    notifyTeamExcept = jest.fn().mockResolvedValue({ recipients: 1, sent: 1 });
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
