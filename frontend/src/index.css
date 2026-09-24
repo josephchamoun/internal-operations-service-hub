@@ -1180,3 +1180,229 @@ button.back {
   max-width: none;
   margin-bottom: 0;
 }
+
+main:has(.analytics-page) {
+  width: min(1180px, calc(100% - 40px));
+}
+.analytics-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: -8px 0 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.analytics-switch button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.analytics-switch button.active {
+  background: var(--header);
+  color: #faf6ef;
+}
+.analytics-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.analytics-stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px 18px;
+  box-shadow: 0 10px 30px rgb(28 25 23 / 0.04);
+  border-top: 4px solid var(--accent);
+}
+.analytics-stat.warn {
+  border-top-color: #b91c1c;
+}
+.analytics-stat.good {
+  border-top-color: #15803d;
+}
+.analytics-stat p,
+.analytics-stat span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.analytics-stat p {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.analytics-stat strong {
+  display: block;
+  margin: 8px 0 6px;
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.analytics-grid .card {
+  margin: 0;
+}
+.analytics-donut-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.analytics-donut {
+  width: 168px;
+  height: 168px;
+  flex: none;
+}
+.analytics-donut-total {
+  font-family: inherit;
+  font-size: 1.7rem;
+  font-weight: 700;
+  fill: var(--ink);
+}
+.analytics-donut-caption {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--muted);
+}
+.analytics-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: grid;
+  gap: 10px;
+}
+.analytics-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.92rem;
+}
+.analytics-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+.analytics-bars {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.analytics-bars li div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+.analytics-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #efeae2;
+  overflow: hidden;
+}
+.analytics-track span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+.analytics-empty {
+  margin: 8px 0 0;
+}
+.analytics-months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-height: 180px;
+}
+.analytics-month {
+  display: grid;
+  grid-template-rows: auto 120px auto;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.analytics-month-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.analytics-month-track {
+  width: 100%;
+  max-width: 48px;
+  height: 120px;
+  display: flex;
+  align-items: end;
+  background: #f6f1e8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.analytics-month-track span {
+  display: block;
+  width: 100%;
+  background: linear-gradient(180deg, #14988d 0%, #0f766e 100%);
+  border-radius: 12px 12px 0 0;
+}
+.analytics-month-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.analytics-notes ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.analytics-notes .card,
+.analytics-notes {
+  background:
+    linear-gradient(180deg, #f3faf7 0%, var(--card) 42%);
+}
+
+@media (max-width: 900px) {
+  .analytics-stats,
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .analytics-donut-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .analytics-donut {
+    align-self: center;
+  }
+}
+@media (max-width: 720px) {
+  main:has(.analytics-page) {
+    width: min(100% - 28px, 1120px);
+  }
+  .analytics-stats,
+  .analytics-grid,
+  .analytics-months {
+    grid-template-columns: 1fr 1fr;
+  }
+  .analytics-months {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

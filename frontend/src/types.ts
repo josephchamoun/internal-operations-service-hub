@@ -88,3 +88,26 @@ export interface IntakeSuggestion {
   clarificationQuestion: string | null;
   confidence: "high" | "medium" | "low";
 }
+export interface AnalyticsBucket {
+  id: string;
+  label: string;
+  count: number;
+}
+export interface AnalyticsSlice {
+  total: number;
+  open: number;
+  resolved: number;
+  cancelled: number;
+  unclaimed: number;
+  claimedByMe: number;
+  urgentOpen: number;
+  byStatus: AnalyticsBucket[];
+  byPriority: AnalyticsBucket[];
+  byCategory: AnalyticsBucket[];
+  byTeam: AnalyticsBucket[];
+  byMonth: AnalyticsBucket[];
+}
+export interface AnalyticsReport {
+  submitted: AnalyticsSlice;
+  queue: AnalyticsSlice | null;
+}

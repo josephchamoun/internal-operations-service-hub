@@ -20,6 +20,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {hasQueue && <NavLink to="/queue">Queue</NavLink>}
           <NavLink to="/mine">My requests</NavLink>
           <NavLink to="/new">New request</NavLink>
+          <NavLink to="/analytics">Analytics</NavLink>
           {admin && <NavLink to="/admin/users">Admin</NavLink>}
         </nav>
         <div className="identity">

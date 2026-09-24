@@ -16,6 +16,7 @@ import { MessagesModule } from './modules/messages/messages.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { SilencesModule } from './modules/silences/silences.module';
 import { EscalationsModule } from './modules/escalations/escalations.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { EscalationsModule } from './modules/escalations/escalations.module';
     AttachmentsModule,
     SilencesModule,
     EscalationsModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

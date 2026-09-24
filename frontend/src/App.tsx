@@ -14,6 +14,7 @@ import { TeamsPage } from "./pages/admin/teams-page";
 import { CategoriesPage } from "./pages/admin/categories-page";
 import { PrioritiesPage } from "./pages/admin/priorities-page";
 import { AuthCallbackPage } from "./pages/auth-callback-page";
+import { AnalyticsPage } from "./pages/analytics-page";
 
 function Protected({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -105,6 +106,16 @@ export default function App() {
           </Protected>
         }
       />
+
+      <Route
+        path="/analytics"
+        element={
+          <Protected>
+            <AnalyticsPage />
+          </Protected>
+        }
+      />
+
       <Route
         path="/admin/users"
         element={
