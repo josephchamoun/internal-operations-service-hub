@@ -117,16 +117,26 @@ export class AuthService {
     return { msalClient: this.msalClient, redirectUri: this.redirectUri };
   }
 
+  private assertActive(user: { active: boolean }): void {
+    if (!user.active) {
+      throw new ForbiddenException(
+        'This account is inactive. Contact an administrator.',
+      );
+    }
+  }
+
   private async resolveUser(oid: string, email: string) {
     const byIdp = await this.usersService.findByIdpSubjectId(oid);
     console.log('byIdp:', byIdp);
     if (byIdp) {
+        this.assertActive(byIdp);
         return byIdp;
     }
 
     const byEmail = await this.usersService.findByEmail(email);
     console.log('byEmail:', byEmail, 'searching for email:', JSON.stringify(email));
     if (byEmail && !byEmail.idpSubjectId) {
+        this.assertActive(byEmail);
         return this.usersService.linkIdpSubjectId(byEmail.id, oid);
     }
 
@@ -139,6 +149,7 @@ export class AuthService {
   // This is a development-only endpoint that allows you to log in as any seeded user without going through Microsoft authentication.
   async devLogin(userId: string): Promise<{ accessToken: string }> {
     const user = await this.usersService.findOne(userId); // throws NotFoundException if not seeded
+    this.assertActive(user);
     const memberships = await this.teamMembershipsService.findByUserId(user.id);
     const teamIds = memberships.map((m) => m.teamId);
 

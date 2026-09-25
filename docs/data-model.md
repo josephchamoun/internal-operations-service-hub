@@ -52,6 +52,7 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 | name           | text                               | Admin-set                                                                               |
 | email          | text                               | contact address for notifications, Admin-set                                            |
 | role           | enum(employee, team_member, admin) | Admin-assigned, independent of the identity provider                                    |
+| active         | boolean, default true              | Admin-set. False blocks sign-in and notification email. The row stays; requester_id, sender_id, claimed_by, and actor_id on existing records are not changed |
 | created_at     | timestamp                          |                                                                                         |
 
 **Request:** the central entity, representing one submitted request from creation to resolution.

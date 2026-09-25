@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -17,4 +17,8 @@ export class UpdateUserDto {
   @IsArray()
   @IsString({ each: true })
   teamIds?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }

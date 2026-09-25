@@ -177,6 +177,7 @@ export function AdminList({ type }: { type: AdminResource }) {
                     <strong title={(item as User).name}>{(item as User).name}</strong>
                     <span title={(item as User).email}>{(item as User).email}</span>
                     <span>{(item as User).role}</span>
+                    <span>{(item as User).active === false ? "Inactive" : "Active"}</span>
                     <span title={(item as User).teamIds?.join(", ") || "No teams"}>
                       {(item as User).teamIds?.length
                         ? (item as User).teamIds
@@ -269,6 +270,9 @@ function AdminForm({
   const [teamIds, setTeamIds] = useState<string[]>(
     item && "teamIds" in item ? item.teamIds ?? [] : [],
   );
+  const [active, setActive] = useState(
+    item && "active" in item ? item.active !== false : true,
+  );
   const [defaultTeamId, setDefaultTeamId] = useState(
     item && "defaultTeamId" in item ? (item.defaultTeamId ?? "") : "",
   );
@@ -288,6 +292,7 @@ function AdminForm({
           email,
           role,
           teamIds: canAssignTeams ? teamIds : [],
+          ...(item ? { active } : {}),
         },
         item?.id,
       );
@@ -344,6 +349,16 @@ function AdminForm({
               <option value="admin">admin</option>
             </select>
           </label>
+          {item && (
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(event) => setActive(event.target.checked)}
+              />
+              Active. They can sign in and receive email.
+            </label>
+          )}
           {canAssignTeams && (
             <fieldset className="admin-teams">
               <legend>Teams</legend>

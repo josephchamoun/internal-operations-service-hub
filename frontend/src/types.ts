@@ -40,6 +40,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  active: boolean;
   teamIds: string[];
 }
 export interface RequestEvent {

@@ -25,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
     const user = await this.usersService.findById(payload.userId);
-    if (!user) {
+    if (!user || !user.active) {
       throw new UnauthorizedException();
     }
     const memberships = await this.teamMembershipsService.listByUserId(user.id);

@@ -43,6 +43,10 @@ export class UsersRepository {
     return this.prisma.user.count({ where: { role } });
   }
 
+  async countActiveAdmins(): Promise<number> {
+    return this.prisma.user.count({ where: { role: UserRole.admin, active: true } });
+  }
+
   async countReferences(userId: string): Promise<number> {
     const [requested, claimed, messages, attachments, events, silences, accessLogs] =
       await Promise.all([
@@ -97,6 +101,7 @@ export class UsersRepository {
     email: string;
     role: UserRole;
     teamIds: string[];
+    active: boolean;
   }): Promise<UserEntity> {
     const row = await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
@@ -105,6 +110,7 @@ export class UsersRepository {
           name: input.name,
           email: input.email,
           role: input.role,
+          active: input.active,
         },
       });
       await tx.teamMembership.deleteMany({ where: { userId: input.id } });
@@ -149,6 +155,7 @@ function toEntity(row: UserRow): UserEntity {
     name: row.name,
     email: row.email,
     role: row.role,
+    active: row.active,
     teamIds: (row.memberships ?? []).map((item) => item.teamId),
     createdAt: row.createdAt.toISOString(),
   };

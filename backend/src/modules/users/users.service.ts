@@ -89,12 +89,20 @@ export class UsersService {
     if (existing.role === 'admin' && role !== 'admin') {
       await this.assertNotLastAdmin();
     }
+    const active = dto.active ?? existing.active;
+    if (existing.role === 'admin' && role === 'admin' && existing.active && !active) {
+      const activeAdmins = await this.repo.countActiveAdmins();
+      if (activeAdmins <= 1) {
+        throw new ConflictException('Cannot deactivate the last admin');
+      }
+    }
     return this.repo.update({
       id,
       name: dto.name?.trim() ?? existing.name,
       email,
       role,
       teamIds,
+      active,
     });
   }
 

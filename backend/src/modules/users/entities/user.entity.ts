@@ -4,6 +4,7 @@ export class UserEntity {
   name: string;
   email: string;
   role: 'employee' | 'team_member' | 'admin';
+  active: boolean;
   teamIds: string[];
   createdAt: string;
 }

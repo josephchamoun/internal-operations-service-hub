@@ -70,6 +70,7 @@ The system must:
 27. The escalation scheduler's check frequency and the actual reminder frequency are independent. The scheduler may check for stale requests often (e.g. every couple of hours) without reminding the team that often; a reminder for a given request only goes out once the priority level's escalation window has elapsed since the last reminder for that request.
 28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. Repeat opens of the same request by the same person within one hour do not create another log row, and the confirmation prompt is not shown again in that window. After an hour, both the prompt and a new log row apply again. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
 29. Before a request is saved, the requester may paste free text and ask the hub for an advisory intake suggestion. The backend sends only that draft plus the Admin-defined category, team, and priority lists to a language model. The model returns structured JSON. The backend validates every product-owned value against those lists and builds the response the requester sees (summary, request type, category, priority, owning team, suggested next step, optional self-serve hint, clarification if the text is thin or ambiguous). The suggestion never creates the request. The requester can edit or ignore it and still submit through the existing form. If the provider is down or returns unreadable output, submission still works without the suggestion.
+30. The Admin can mark a user active or inactive. An inactive user cannot sign in, even when the identity provider still accepts their email, and a session they already have fails on the next request. They receive no notification email, including escalation reminders; other members of the team still do. Their user row stays, and their name remains on existing requests, messages, claims, and logs. Those rows are not rewritten. The last active admin cannot be marked inactive.
 
 ## 5. Non-Functional Requirements
 
@@ -280,6 +281,12 @@ Given a user's team/department affiliation as reported by the identity provider,
 
 **Admin-assigned role and team memberships determine permissions**
 Given the Admin assigns a user a role (employee, owning-team member, admin) and, for team members, one or more team memberships, when that assignment is saved, then the user's permissions in the hub reflect exactly that role and team set going forward.
+
+**Inactive user cannot sign in**
+Given the Admin has marked a user inactive, when that person authenticates with the identity provider or presents an existing hub session, then the hub refuses access. Their existing requests, messages, and log rows are unchanged.
+
+**Inactive user is skipped in team mail**
+Given an inactive user is still a member of the owning team, when the hub emails that team about a request or an escalation reminder, then that person is not a recipient and the other members still are.
 
 **Team filters stay within the member's own teams**
 Given a team member's set of team memberships, when they filter their queue, then filtering by status, team, and category returns only requests already visible to them through those memberships (never a team they don't belong to).

@@ -958,7 +958,7 @@ button.back {
   white-space: nowrap;
 }
 .admin-row-users {
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) 120px minmax(0, 0.8fr) auto;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) 120px 80px minmax(0, 0.8fr) auto;
 }
 .admin-row-teams {
   grid-template-columns: minmax(0, 1fr) auto;

@@ -72,6 +72,7 @@ export class NotificationsService {
 
   async notifyUser(userId: string, subject: string, body: string): Promise<void> {
     const user = await this.usersService.findOne(userId);
+    if (!user.active) return;
     await this.send(user.email, subject, body);
   }
 
@@ -92,8 +93,9 @@ export class NotificationsService {
 
     for (const m of memberships) {
       if (skip.has(m.userId)) continue;
-      recipients += 1;
       const user = await this.usersService.findOne(m.userId);
+      if (!user.active) continue;
+      recipients += 1;
       const ok = await this.send(user.email, subject, body);
       if (ok) sent += 1;
       await this.delay(300); // stay under the sandbox's per-second rate limit
