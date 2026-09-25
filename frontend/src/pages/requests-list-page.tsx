@@ -18,7 +18,7 @@ const statuses: RequestStatus[] = [
   "Cancelled",
 ];
 export function RequestListPage({ mine = false }: { mine?: boolean }) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const client = useQueryClient();
   const query = useApiQuery<RequestItem[]>(
     [mine ? "mine" : "requests"],
@@ -38,17 +38,18 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
     !mine &&
     (user?.role === "admin" || (user?.teamIds?.length ?? 0) > 1);
   const showCategoryFilter = !mine && (user?.role === "admin" || canBeClaimant);
+  const userId = user?.userId;
   useEffect(() => {
-    if (!token) return;
-    const stream = new EventSource(
-      apiUrl(`/requests/stream/all?token=${encodeURIComponent(token)}`),
-    );
+    if (!userId) return;
+    const stream = new EventSource(apiUrl("/requests/stream/all"), {
+      withCredentials: true,
+    });
     stream.onmessage = () => {
       void client.invalidateQueries({ queryKey: ["requests"] });
       void client.invalidateQueries({ queryKey: ["mine"] });
     };
     return () => stream.close();
-  }, [token, client]);
+  }, [userId, client]);
   if (
     query.isPending ||
     teams.isPending ||

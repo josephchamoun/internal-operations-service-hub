@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { HubJwtPayload } from '../auth.service';
 import { UsersService } from '../../users/users.service';
 import { TeamMembershipsService } from '../../team-memberships/team-memberships.service';
+import { accessTokenFromCookie } from '../access-cookie';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,7 +15,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly teamMembershipsService: TeamMembershipsService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req) => accessTokenFromCookie(req),
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
     });

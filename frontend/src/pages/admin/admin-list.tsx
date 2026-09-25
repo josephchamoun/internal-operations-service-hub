@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { useAuth } from "../../auth";
 import { useApiQuery } from "../../hooks/use-api-query";
 import type { Category, Priority, Role, Team, User } from "../../types";
 import { Button } from "../../components/button";
@@ -24,9 +23,10 @@ const OTHER_CATEGORY_ID = "other";
 const DEFAULT_PRIORITY_ID = "Normal";
 
 export function AdminList({ type }: { type: AdminResource }) {
-  const { token } = useAuth();
+  //the function has type and the type must be one of the AdminResource types
   const queryClient = useQueryClient();
   const query = useApiQuery<Item[]>([type], `/${type}`);
+  //fetching teams for users and categories only
   const teams = useApiQuery<Team[]>(
     ["teams"],
     "/teams",
@@ -36,14 +36,20 @@ export function AdminList({ type }: { type: AdminResource }) {
   const [editing, setEditing] = useState<Item | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Reload this page's list. User edits can change team membership, so refresh teams too.
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: [type] });
-    if (type === "users") void queryClient.invalidateQueries({ queryKey: ["teams"] });
+    if (type === "users")
+      void queryClient.invalidateQueries({ queryKey: ["teams"] });
   };
 
   const save = useMutation({
-    mutationFn: (payload: { path: string; method: "POST" | "PATCH"; body: unknown }) =>
-      api<Item>(payload.path, token, {
+    mutationFn: (payload: {
+      path: string;
+      method: "POST" | "PATCH";
+      body: unknown;
+    }) =>
+      api<Item>(payload.path, {
         method: payload.method,
         body: JSON.stringify(payload.body),
       }),
@@ -56,7 +62,7 @@ export function AdminList({ type }: { type: AdminResource }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) =>
-      api<Item>(`/${type}/${id}`, token, { method: "DELETE" }),
+      api<Item>(`/${type}/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       setError(null);
       invalidate();
@@ -94,20 +100,28 @@ export function AdminList({ type }: { type: AdminResource }) {
   const items = query.data.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase()),
   );
-  const teamOptions = type === "teams" ? (query.data as Team[]) : (teams.data ?? []);
+  const teamOptions =
+    type === "teams" ? (query.data as Team[]) : (teams.data ?? []);
 
   return (
     <>
       <div className="page-heading">
         <div>
           <div className="eyebrow">Administration</div>
+          {/* Capitalize the page name: "users" becomes "Users". */}
           <h1>{type[0].toUpperCase() + type.slice(1)}</h1>
           <p className="page-description">
             Add or edit hub reference data. Unused rows can be removed. Other is
             a permanent category and cannot be changed.
           </p>
         </div>
-        <Button type="button" onClick={() => { setEditing("new"); setError(null); }}>
+        <Button
+          type="button"
+          onClick={() => {
+            setEditing("new");
+            setError(null);
+          }}
+        >
           Add {SINGULAR[type]}
         </Button>
       </div>
@@ -127,27 +141,34 @@ export function AdminList({ type }: { type: AdminResource }) {
           className="modal-backdrop"
           role="dialog"
           aria-modal="true"
-          aria-label={editing === "new" ? `New ${SINGULAR[type]}` : `Edit ${(editing as Item).name}`}
+          aria-label={
+            editing === "new"
+              ? `New ${SINGULAR[type]}`
+              : `Edit ${(editing as Item).name}`
+          }
           onClick={closeEditor}
         >
-          <div className="admin-modal-shell" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="admin-modal-shell"
+            onClick={(event) => event.stopPropagation()}
+          >
             <Card className="modal-card admin-modal">
-            <AdminForm
-              type={type}
-              item={editing === "new" ? null : editing}
-              teams={teamOptions}
-              saving={save.isPending}
-              error={error ?? (save.isError ? save.error.message : null)}
-              onCancel={closeEditor}
-              onSubmit={(body, id) => {
-                setError(null);
-                save.mutate({
-                  path: id ? `/${type}/${id}` : `/${type}`,
-                  method: id ? "PATCH" : "POST",
-                  body,
-                });
-              }}
-            />
+              <AdminForm
+                type={type}
+                item={editing === "new" ? null : editing}
+                teams={teamOptions}
+                saving={save.isPending}
+                error={error ?? (save.isError ? save.error.message : null)}
+                onCancel={closeEditor}
+                onSubmit={(body, id) => {
+                  setError(null);
+                  save.mutate({
+                    path: id ? `/${type}/${id}` : `/${type}`,
+                    method: id ? "PATCH" : "POST",
+                    body,
+                  });
+                }}
+              />
             </Card>
           </div>
         </div>
@@ -174,37 +195,57 @@ export function AdminList({ type }: { type: AdminResource }) {
               <div key={item.id} className={`admin-row admin-row-${type}`}>
                 {type === "users" && (
                   <>
-                    <strong title={(item as User).name}>{(item as User).name}</strong>
-                    <span title={(item as User).email}>{(item as User).email}</span>
+                    <strong title={(item as User).name}>
+                      {(item as User).name}
+                    </strong>
+                    <span title={(item as User).email}>
+                      {(item as User).email}
+                    </span>
                     <span>{(item as User).role}</span>
-                    <span>{(item as User).active === false ? "Inactive" : "Active"}</span>
-                    <span title={(item as User).teamIds?.join(", ") || "No teams"}>
+                    <span>
+                      {(item as User).active === false ? "Inactive" : "Active"}
+                    </span>
+                    <span
+                      title={(item as User).teamIds?.join(", ") || "No teams"}
+                    >
                       {(item as User).teamIds?.length
                         ? (item as User).teamIds
-                            .map((id) => teamOptions.find((team) => team.id === id)?.name ?? id)
+                            .map(
+                              (id) =>
+                                teamOptions.find((team) => team.id === id)
+                                  ?.name ?? id,
+                            )
                             .join(", ")
                         : "No teams"}
                     </span>
                   </>
                 )}
                 {type === "teams" && (
-                  <strong title={(item as Team).name}>{(item as Team).name}</strong>
+                  <strong title={(item as Team).name}>
+                    {(item as Team).name}
+                  </strong>
                 )}
                 {type === "categories" && (
                   <>
-                    <strong title={(item as Category).name}>{(item as Category).name}</strong>
+                    <strong title={(item as Category).name}>
+                      {(item as Category).name}
+                    </strong>
                     <span>
                       Default team:{" "}
                       {(item as Category).defaultTeamId
-                        ? teamOptions.find((team) => team.id === (item as Category).defaultTeamId)
-                            ?.name ?? (item as Category).defaultTeamId
+                        ? (teamOptions.find(
+                            (team) =>
+                              team.id === (item as Category).defaultTeamId,
+                          )?.name ?? (item as Category).defaultTeamId)
                         : "None (manual selection)"}
                     </span>
                   </>
                 )}
                 {type === "priorities" && (
                   <>
-                    <strong title={(item as Priority).name}>{(item as Priority).name}</strong>
+                    <strong title={(item as Priority).name}>
+                      {(item as Priority).name}
+                    </strong>
                     <span>
                       {(item as Priority).escalationWindowMinutes} minute
                       escalation window
@@ -216,7 +257,10 @@ export function AdminList({ type }: { type: AdminResource }) {
                     <Button
                       type="button"
                       className="secondary"
-                      onClick={() => { setEditing(item); setError(null); }}
+                      onClick={() => {
+                        setEditing(item);
+                        setError(null);
+                      }}
                     >
                       Edit
                     </Button>
@@ -268,7 +312,7 @@ function AdminForm({
     item && "role" in item ? item.role : "employee",
   );
   const [teamIds, setTeamIds] = useState<string[]>(
-    item && "teamIds" in item ? item.teamIds ?? [] : [],
+    item && "teamIds" in item ? (item.teamIds ?? []) : [],
   );
   const [active, setActive] = useState(
     item && "active" in item ? item.active !== false : true,

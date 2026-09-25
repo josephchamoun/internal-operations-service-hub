@@ -9,13 +9,11 @@ export function ReassignForm({
   request,
   teams,
   categories,
-  token,
   compact = false,
 }: {
   request: RequestItem;
   teams: Team[];
   categories: Category[];
-  token: string | null;
   compact?: boolean;
 }) {
   const navigate = useNavigate();
@@ -23,7 +21,7 @@ export function ReassignForm({
   const [categoryId, setCategoryId] = useState("");
   const action = useMutation({
     mutationFn: () =>
-      api<RequestItem>(`/requests/${request.id}/reassign`, token, {
+      api<RequestItem>(`/requests/${request.id}/reassign`, {
         method: "PATCH",
         body: JSON.stringify({
           newTeamId: teamId,

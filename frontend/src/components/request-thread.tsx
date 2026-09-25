@@ -15,7 +15,7 @@ export function RequestThread({
   request: RequestItem;
   canPost: boolean;
 }) {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const client = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -45,7 +45,7 @@ export function RequestThread({
       const data = new FormData();
       if (body.trim()) data.append("body", body.trim());
       outgoing.forEach((file) => data.append("files", file));
-      return api<RequestMessage>(`/requests/${request.id}/messages`, token, {
+      return api<RequestMessage>(`/requests/${request.id}/messages`, {
         method: "POST",
         body: data,
       });
@@ -62,7 +62,7 @@ export function RequestThread({
   });
   const removeFile = useMutation({
     mutationFn: (attachmentId: string) =>
-      api(`/requests/${request.id}/attachments/${attachmentId}`, token, {
+      api(`/requests/${request.id}/attachments/${attachmentId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
@@ -76,7 +76,7 @@ export function RequestThread({
       if (blocked) throw new Error(blocked);
       const data = new FormData();
       data.append("file", file);
-      return api(`/requests/${request.id}/attachments/${attachmentId}`, token, {
+      return api(`/requests/${request.id}/attachments/${attachmentId}`, {
         method: "PATCH",
         body: data,
       });
@@ -114,7 +114,6 @@ export function RequestThread({
               key={item.id}
               item={item}
               requestId={request.id}
-              token={token}
               canMutate={canMutateRequestFile(item)}
               onDelete={() => removeFile.mutate(item.id)}
               onReplace={(file) =>
@@ -160,7 +159,6 @@ export function RequestThread({
                         key={item.id}
                         item={item}
                         requestId={request.id}
-                        token={token}
                         canMutate={canMutateRequestFile(item)}
                         onDelete={() => removeFile.mutate(item.id)}
                         onReplace={(file) =>
@@ -269,14 +267,12 @@ export function RequestThread({
 function AttachmentChip({
   item,
   requestId,
-  token,
   canMutate,
   onDelete,
   onReplace,
 }: {
   item: AttachmentMeta;
   requestId: string;
-  token: string | null;
   canMutate: boolean;
   onDelete: () => void;
   onReplace: (file: File) => void;
@@ -289,7 +285,6 @@ function AttachmentChip({
         onClick={() =>
           void downloadFile(
             `/requests/${requestId}/attachments/${item.id}`,
-            token,
             item.fileName,
           )
         }

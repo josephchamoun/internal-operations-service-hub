@@ -28,7 +28,7 @@ const statuses: RequestStatus[] = ["In Progress", "Resolved"];
 
 export function FullRequestPage() {
   const { id = "" } = useParams();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const client = useQueryClient();
   const navigate = useNavigate();
   const preview = useApiQuery<RequestItem>(["request", id], `/requests/${id}`);
@@ -79,17 +79,18 @@ export function FullRequestPage() {
     setEditSubject(detail.data.subject);
     setEditDescription(detail.data.description ?? "");
   }, [detail.data]);
+  const userId = user?.userId;
   useEffect(() => {
-    if (!token) return;
-    const stream = new EventSource(
-      apiUrl(`/requests/${id}/stream?token=${encodeURIComponent(token)}`),
-    );
+    if (!userId) return;
+    const stream = new EventSource(apiUrl(`/requests/${id}/stream`), {
+      withCredentials: true,
+    });
     stream.onmessage = refresh;
     return () => stream.close();
-  }, [id, token]);
+  }, [id, userId]);
   const action = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: object }) =>
-      api<RequestItem>(path, token, {
+      api<RequestItem>(path, {
         method: "PATCH",
         ...(body ? { body: JSON.stringify(body) } : {}),
       }),
@@ -176,7 +177,6 @@ export function FullRequestPage() {
                     request={request}
                     teams={teams.data ?? []}
                     categories={categories.data ?? []}
-                    token={token}
                   />
                 )}
                 <div className="detail-links">
@@ -434,7 +434,6 @@ export function FullRequestPage() {
                     request={request}
                     teams={teams.data}
                     categories={categories.data}
-                    token={token}
                     compact
                   />
                 )}

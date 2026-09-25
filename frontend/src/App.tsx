@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth";
 import { Layout } from "./components/layout";
+import { Loading } from "./components/loading";
 import { LoginPage } from "./pages/login-page";
 import { RequestListPage } from "./pages/requests-list-page";
 import { NewRequestPage } from "./pages/new-request-page";
@@ -17,8 +18,9 @@ import { AuthCallbackPage } from "./pages/auth-callback-page";
 import { AnalyticsPage } from "./pages/analytics-page";
 
 function Protected({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
-  return token ? <Layout>{children}</Layout> : <Navigate to="/login" replace />;
+  const { user, ready } = useAuth();
+  if (!ready) return <Loading />;
+  return user ? <Layout>{children}</Layout> : <Navigate to="/login" replace />;
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -37,8 +39,10 @@ function HasQueue({ children }: { children: ReactNode }) {
 }
 
 function Home() {
-  const { user } = useAuth();
-  const hasQueue = user?.role === "admin" || (user?.teamIds?.length ?? 0) > 0;
+  const { user, ready } = useAuth();
+  if (!ready) return <Loading />;
+  if (!user) return <Navigate to="/login" replace />;
+  const hasQueue = user.role === "admin" || (user.teamIds?.length ?? 0) > 0;
   return <Navigate to={hasQueue ? "/queue" : "/mine"} replace />;
 }
 

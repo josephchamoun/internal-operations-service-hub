@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { useAuth } from "../auth";
 import { useApiQuery } from "../hooks/use-api-query";
 import { Button } from "./button";
 
@@ -11,7 +10,6 @@ export function SilenceToggle({
   requestId: string;
   enabled: boolean;
 }) {
-  const { token } = useAuth();
   const client = useQueryClient();
   const silence = useApiQuery<{ silenced: boolean }>(
     ["silence", requestId],
@@ -20,7 +18,7 @@ export function SilenceToggle({
   );
   const toggle = useMutation({
     mutationFn: () =>
-      api<{ silenced: boolean }>(`/requests/${requestId}/silence`, token, {
+      api<{ silenced: boolean }>(`/requests/${requestId}/silence`, {
         method: silence.data?.silenced ? "DELETE" : "PUT",
       }),
     onSuccess: () => {

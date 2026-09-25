@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService, HubJwtPayload } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { clearAccessCookie, setAccessCookie } from './access-cookie';
 
 @Controller('auth')
 export class AuthController {
@@ -30,11 +31,8 @@ export class AuthController {
     const frontendUrl = (
       this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
     ).replace(/\/$/, '');
-    // Real Microsoft login hands the token to the frontend via a redirect,
-    // since the browser is the one that needs to end up holding it.
-    return res.redirect(
-      `${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}`,
-    );
+    setAccessCookie(res, accessToken);
+    return res.redirect(`${frontendUrl}/auth/callback`);
   }
 
   // ── TEST-ONLY LOGIN — safe to delete this whole method before any real
@@ -44,11 +42,22 @@ export class AuthController {
   // be exercised without needing a real Entra ID tenant/credentials.
   // Already gated off in production via the NODE_ENV check below.
   @Post('dev-login')
-  async devLogin(@Body('userId') userId: string) {
+  async devLogin(
+    @Body('userId') userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (process.env.NODE_ENV === 'production') {
       throw new ForbiddenException('Dev login is disabled in production');
     }
-    return this.authService.devLogin(userId);
+    const result = await this.authService.devLogin(userId);
+    setAccessCookie(res, result.accessToken);
+    return result;
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    clearAccessCookie(res);
+    return { ok: true };
   }
 
   @Get('me')

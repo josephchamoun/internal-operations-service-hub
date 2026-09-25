@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import { useAuth } from "../auth";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
+import { Loading } from "../components/loading";
 
 // TEST-ONLY — safe to delete this array and the picker UI below before any
 // real deployment. Corresponds to POST /auth/dev-login on the backend,
@@ -24,19 +25,24 @@ const testUsers = [
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 export function LoginPage() {
-  const { token, login, notice } = useAuth();
+  const { user, ready, refresh, notice } = useAuth();
   const [params] = useSearchParams();
   const [userId, setUserId] = useState(testUsers[0][0]);
   const microsoftUnavailable = params.get("microsoft") === "unavailable";
   const mutation = useMutation({
-    mutationFn: () =>
-      api<{ accessToken: string }>("/auth/dev-login", undefined, {
+    mutationFn: async () => {
+      await api("/auth/dev-login", {
         method: "POST",
         body: JSON.stringify({ userId }),
-      }),
-    onSuccess: ({ accessToken }) => login(accessToken),
+      });
+      const signedIn = await refresh();
+      if (!signedIn) {
+        throw new Error("Sign-in did not start. Try again.");
+      }
+    },
   });
-  if (token) return <Navigate to="/queue" replace />;
+  if (!ready) return <Loading />;
+  if (user) return <Navigate to="/queue" replace />;
   return (
     <div className="login-shell">
       <aside className="login-intro">

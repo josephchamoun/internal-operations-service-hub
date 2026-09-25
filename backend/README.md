@@ -95,7 +95,7 @@ Only needed if you want to test the actual "Sign in with Microsoft" flow rather 
 6. For a real user to actually be able to log in, an admin must first create a matching `User` row in this app's own database (by their email) — Entra ID only proves who someone is, it never auto-creates accounts here. Use `npx prisma studio` to add the row, or add them to `prisma/seed.ts` and re-seed.
 7. Whoever you want to test with needs a real Entra ID account (email + password) in that tenant — either your own Microsoft 365/Azure AD tenant's users, or a free Azure AD tenant you set up for this purpose.
 
-Once configured, `GET /auth/login` redirects to Microsoft's real login page, and a successful login redirects back to the frontend with a session token — no different from the flow described for `dev-login` below, just via a real identity provider instead of a seeded lookup.
+Once configured, `GET /auth/login` redirects to Microsoft's real login page. A successful login sets the same httpOnly session cookie as `dev-login` and redirects to the frontend. The token is not put in the redirect URL.
 
 ### Setting up email notifications (Mailtrap) — optional
 
@@ -122,7 +122,9 @@ There's no browsable UI at that URL by itself — either use Postman/Thunder Cli
 
 ## Authentication
 
-Every route requires a valid session token (`Authorization: Bearer <token>`), obtained one of two ways:
+Every route requires a valid session JWT. The browser does not keep that token in JavaScript. Login sets an httpOnly cookie named `access_token` (`Secure`, `SameSite=None`). The page cannot read it. Later requests send it because the frontend calls the API with credentials included. `POST /auth/logout` clears the cookie. `GET /auth/me` is how the page learns who is signed in.
+
+Postman and the automated tests can still send `Authorization: Bearer <token>` instead of the cookie. A request with neither is `401`.
 
 **Test login (`dev-login`), for local testing and the automated test suite:**
 
@@ -131,19 +133,17 @@ POST /auth/dev-login
 { "userId": "dev-manager" }   // or "dev-employee"
 ```
 
-Returns `{ "accessToken": "..." }`. This looks up a seeded user by id directly, skipping Microsoft entirely — it issues the exact same shape of JWT as real login, so nothing downstream can tell them apart. It's disabled outright when `NODE_ENV=production`.
+Sets the cookie and also returns `{ "accessToken": "..." }`. This looks up a seeded user by id directly, skipping Microsoft entirely — it issues the exact same shape of JWT as real login, so nothing downstream can tell them apart. It's disabled outright when `NODE_ENV=production`.
 
 **Real login, via Microsoft Entra ID** (only if configured, see above):
 
-`GET /auth/login` → redirects to Microsoft → after a real login, `GET /auth/callback` exchanges the result for this app's own JWT and redirects to the frontend with it.
-
-Either way, attach the returned token as `Authorization: Bearer <token>` on every subsequent request. Every route now enforces this — you'll get `401` without it.
+`GET /auth/login` → redirects to Microsoft → after a real login, `GET /auth/callback` exchanges the result for this app's own JWT, sets the cookie, and redirects to the frontend.
 
 ## Current stage and limitations
 
 Storage: real SQLite via Prisma (`prisma/schema.prisma`, `prisma/dev.db`). No more flat JSON files — those and the old `FileStorageService` were removed entirely when this migration happened.
 
-Auth: real, via the two paths above. Every route requires a valid JWT; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from the token.
+Auth: real, via the two paths above. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
 
 Frontend: exists now, in `../frontend` (React + Vite + TypeScript), covering the full flow plus admin CRUD. See its own README.
 
@@ -184,7 +184,7 @@ Admin only. Duplicate emails rejected. Last admin cannot be removed. `Other` is 
 
 ## Requests endpoints
 
-The actor for every request below is whoever the `Authorization: Bearer <token>` header resolves to — there is no more `actorId` body or query param anywhere.
+The actor for every request below is whoever the session cookie or `Authorization: Bearer <token>` header resolves to — there is no more `actorId` body or query param anywhere.
 
 | Method | Path                     | Body                                                         | Authorization rule                                                                                                                                                                                                             |
 | ------ | ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -196,7 +196,7 @@ The actor for every request below is whoever the `Authorization: Bearer <token>`
 | GET    | `/requests/:id`          | —                                                            | Limited detail (no `description`). Requester, owning-team member, or admin only — `403` otherwise.                                                                                                                             |
 | GET    | `/requests/:id/full`     | —                                                            | Full detail. Requester, owning-team member, or admin only — `403` otherwise. Owning-team and admin views are written to `AccessLog`; the requester's own view is not.                                                                 |
 | GET    | `/requests/:id/events`   | —                                                            | Requester, owning-team member, or admin.                                                                                                                                                                                       |
-| GET    | `/requests/:id/stream`   | query: `?token=<accessToken>`                                | Same as `/events` above (SSE can't send an `Authorization` header, so the token travels as a query param instead).                                                                                                             |
+| GET    | `/requests/:id/stream`   | cookie, or query `?token=<accessToken>`                      | Same as `/events` above. The browser sends the session cookie. A query token is still accepted for a client that cannot send the cookie.                                                                                       |
 | PATCH  | `/requests/:id/claim`    | —                                                            | Actor must be a member of the owning team. `409` if already claimed.                                                                                                                                                           |
 | PATCH  | `/requests/:id/unclaim`  | —                                                            | Actor must be the current claimant. `400` if not currently claimed. Clears the claim and sets status back to `New` if it was `In Progress`.                                                                                     |
 | PATCH  | `/requests/:id/status`   | `{ status }`                                                 | Actor must be the current claimant. `status` is `"In Progress"` or `"Resolved"`.                                                                                                                                               |
@@ -234,7 +234,7 @@ All errors follow Nest's standard shape:
 | Status | When it happens                                                                                                                                                                                                          |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 400    | A required field is missing/invalid, an unexpected extra field was sent, or a lifecycle rule was violated (category has no default team, request already terminal, not currently claimed, editing after claim or after leaving New, reassigning to the same team, changing priority to the same value). |
-| 401    | No valid `Authorization: Bearer <token>` header.                                                                                                                                                                         |
+| 401    | No valid session cookie and no valid `Authorization: Bearer <token>` header.                                                                                                                                             |
 | 403    | Authenticated, but this actor isn't allowed to do this specific thing to this specific request (see the rule table above).                                                                                               |
 | 404    | A referenced entity does not exist: user, category, priority, team, or request.                                                                                                                                          |
 | 409    | The request is already claimed.                                                                                                                                                                                          |
@@ -252,7 +252,7 @@ Seeded via `prisma/seed.ts` (literal in-file arrays, no longer read from `data/*
 
 ## Try it in Postman
 
-1. `POST /auth/dev-login` with `{ "userId": "dev-employee" }` → copy the `accessToken`. Set it as `Authorization: Bearer <token>` on every request below.
+1. `POST /auth/dev-login` with `{ "userId": "dev-employee" }`. Copy the `accessToken` and set `Authorization: Bearer <token>` on every request below. The response also sets the `access_token` cookie, so Postman's cookie jar can send that instead of the header.
 
 2. `POST /requests`
 

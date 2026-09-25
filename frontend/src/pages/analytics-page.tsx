@@ -19,21 +19,22 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function AnalyticsPage() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const client = useQueryClient();
   const report = useApiQuery<AnalyticsReport>(["analytics"], "/analytics");
   const [scope, setScope] = useState<Scope>("submitted");
 
+  const userId = user?.userId;
   useEffect(() => {
-    if (!token) return;
-    const stream = new EventSource(
-      apiUrl(`/requests/stream/all?token=${encodeURIComponent(token)}`),
-    );
+    if (!userId) return;
+    const stream = new EventSource(apiUrl("/requests/stream/all"), {
+      withCredentials: true,
+    });
     stream.onmessage = () => {
       void client.invalidateQueries({ queryKey: ["analytics"] });
     };
     return () => stream.close();
-  }, [token, client]);
+  }, [userId, client]);
 
   if (report.isPending) return <Loading />;
   if (report.isError) {

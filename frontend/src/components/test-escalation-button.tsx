@@ -1,14 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { useAuth } from "../auth";
 import { Button } from "./button";
 
 export function TestEscalationButton({ requestId }: { requestId: string }) {
-  const { token } = useAuth();
   const client = useQueryClient();
   const run = useMutation({
     mutationFn: () =>
-      api<{ reminded: string[] }>("/escalations/run", token, {
+      api<{ reminded: string[] }>("/escalations/run", {
         method: "POST",
         body: JSON.stringify({
           now: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),

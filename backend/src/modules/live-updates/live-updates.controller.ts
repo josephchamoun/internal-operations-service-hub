@@ -1,9 +1,11 @@
-import { Controller, Sse, Param, Query, UnauthorizedException, ForbiddenException, MessageEvent } from '@nestjs/common';
+import { Controller, Sse, Param, Query, Req, UnauthorizedException, ForbiddenException, MessageEvent } from '@nestjs/common';
+import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { LiveUpdatesService } from './live-updates.service';
 import { RequestsRepository } from '../requests/requests.repository';
 import { HubJwtPayload } from '../auth/auth.service';
+import { accessTokenFromCookie } from '../auth/access-cookie';
 
 @Controller('requests')
 export class LiveUpdatesController {
@@ -14,8 +16,8 @@ export class LiveUpdatesController {
   ) {}
 
   @Sse('stream/all')
-  streamAll(@Query('token') token: string): Observable<MessageEvent> {
-    const payload = this.verify(token);
+  streamAll(@Req() req: Request, @Query('token') token?: string): Observable<MessageEvent> {
+    const payload = this.verify(accessTokenFromCookie(req) ?? token);
     return this.liveUpdatesService.streamForUser({
       userId: payload.userId,
       role: payload.role,
@@ -24,13 +26,18 @@ export class LiveUpdatesController {
   }
 
   @Sse(':id/stream')
-  async stream(@Param('id') id: string, @Query('token') token: string): Promise<Observable<MessageEvent>> {
-    const payload = this.verify(token);
+  async stream(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Query('token') token?: string,
+  ): Promise<Observable<MessageEvent>> {
+    const payload = this.verify(accessTokenFromCookie(req) ?? token);
     await this.assertCanAccess(id, payload);
     return this.liveUpdatesService.streamForRequest(id);
   }
 
-  private verify(token: string): HubJwtPayload {
+  private verify(token: string | null | undefined): HubJwtPayload {
+    if (!token) throw new UnauthorizedException('Invalid or expired token');
     try {
       return this.jwtService.verify(token);
     } catch {

@@ -10,17 +10,19 @@ export class ApiError extends Error {
 
 export async function api<T>(
   path: string,
-  token?: string | null,
   init: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(init.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+    });
   } catch {
     throw new ApiError(
       0,
@@ -44,12 +46,9 @@ export async function api<T>(
 
 export async function downloadFile(
   path: string,
-  token?: string | null,
   fileName?: string,
 ): Promise<void> {
-  const headers = new Headers();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${BASE_URL}${path}`, { headers });
+  const response = await fetch(`${BASE_URL}${path}`, { credentials: "include" });
   if (!response.ok) {
     throw new ApiError(response.status, "Could not download the file");
   }

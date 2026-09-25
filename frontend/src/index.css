@@ -556,10 +556,7 @@ dd {
   align-items: baseline;
   gap: 4px 6px;
 }
-  text-align: center;
-  padding: 36px 12px;
-  color: var(--muted);
-}
+
 .loading {
   color: var(--muted);
   padding: 56px 0;

@@ -2,7 +2,6 @@ import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import { useAuth } from "../auth";
 import { useApiQuery } from "../hooks/use-api-query";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
@@ -18,7 +17,6 @@ import type {
 } from "../types";
 
 export function NewRequestPage() {
-  const { token } = useAuth();
   const navigate = useNavigate();
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
   const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
@@ -45,7 +43,7 @@ export function NewRequestPage() {
 
   const interpret = useMutation({
     mutationFn: () =>
-      api<IntakeSuggestion>("/requests/interpret", token, {
+      api<IntakeSuggestion>("/requests/interpret", {
         method: "POST",
         body: JSON.stringify({ draft: draft.trim() }),
       }),
@@ -55,7 +53,7 @@ export function NewRequestPage() {
     mutationFn: async () => {
       const blocked = files.map(fileError).find(Boolean);
       if (blocked) throw new Error(blocked);
-      const created = await api<RequestItem>("/requests", token, {
+      const created = await api<RequestItem>("/requests", {
         method: "POST",
         body: JSON.stringify({
           categoryId,
@@ -68,7 +66,7 @@ export function NewRequestPage() {
       if (files.length > 0) {
         const data = new FormData();
         files.forEach((file) => data.append("files", file));
-        await api(`/requests/${created.id}/attachments`, token, {
+        await api(`/requests/${created.id}/attachments`, {
           method: "POST",
           body: data,
         });

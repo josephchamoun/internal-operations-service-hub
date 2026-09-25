@@ -23,7 +23,7 @@ function formatDate(date: string) {
 
 export function LimitedRequestPage() {
   const { id = "" } = useParams();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const client = useQueryClient();
   const request = useApiQuery<RequestItem>(["request", id], `/requests/${id}`);
   const people = useUserDirectory();
@@ -31,16 +31,17 @@ export function LimitedRequestPage() {
   const categories = useApiQuery<Category[]>(["categories"], "/categories");
   const priorities = useApiQuery<Priority[]>(["priorities"], "/priorities");
 
+  const userId = user?.userId;
   useEffect(() => {
-    if (!token) return;
-    const stream = new EventSource(
-      apiUrl(`/requests/${id}/stream?token=${encodeURIComponent(token)}`),
-    );
+    if (!userId) return;
+    const stream = new EventSource(apiUrl(`/requests/${id}/stream`), {
+      withCredentials: true,
+    });
     stream.onmessage = () => {
       void client.invalidateQueries({ queryKey: ["request", id] });
     };
     return () => stream.close();
-  }, [id, token, client]);
+  }, [id, userId, client]);
 
   if (
     request.isPending ||
@@ -138,7 +139,6 @@ export function LimitedRequestPage() {
               request={item}
               teams={teams.data}
               categories={categories.data}
-              token={token}
             />
             <SilenceToggle requestId={id} enabled={canSilence} />
           </Card>
