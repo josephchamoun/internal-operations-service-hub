@@ -57,7 +57,7 @@ Authentication (Entra + `dev-login`) and per-action authorization. JWT role/team
 
 React frontend for login, submit, my requests, team queue, limited/full detail, conversation, admin CRUD, access logs, and events.
 
-Email (Mailtrap, fire-and-forget) on new request, unclaim, reassignment, status change, new message, and escalation reminders.
+Email (Mailtrap, fire-and-forget) on new request, unclaim, reassignment, status change, new message, and escalation reminders. Message email waits two minutes before another note to the same side on that request.
 
 SSE live updates on an open request.
 
@@ -69,11 +69,11 @@ Per-user silence and the escalation scheduler.
 
 AI advisory intake.
 
+Creating a request and posting a message are each limited to 5 per person per minute.
+
 ## What's not built yet
 
 No CI/CD, deployment, monitoring, or production infrastructure.
-
-No rate limiting — production-hardening, not this phase.
 
 Queue filters cover status, priority, and claim state; there is still no **category** filter on the team list (product spec item 22).
 

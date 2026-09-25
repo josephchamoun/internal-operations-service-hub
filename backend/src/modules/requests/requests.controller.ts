@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -8,6 +9,7 @@ import { UpdateRequestDetailsDto } from './dto/update-request-details.dto';
 import { InterpretRequestDto } from '../intake-ai/dto/interpret-request.dto';
 import { IntakeAiService } from '../intake-ai/intake-ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { HubJwtPayload } from '../auth/auth.service';
 
@@ -51,6 +53,8 @@ export class RequestsController {
   }
 
   @Post()
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   create(@Body() dto: CreateRequestDto, @CurrentUser() actor: HubJwtPayload) {
     return this.requestsService.create(dto, actor);
   }

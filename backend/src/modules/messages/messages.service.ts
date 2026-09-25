@@ -14,9 +14,12 @@ import { HubJwtPayload } from '../auth/auth.service';
 import { assertAllowedFiles, StoredUpload } from '../attachments/file-rules';
 import { LiveUpdatesService } from '../live-updates/live-updates.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MessageMailWindow } from './message-mail-window';
 
 @Injectable()
 export class MessagesService {
+  private readonly messageMail = new MessageMailWindow();
+
   constructor(
     private readonly repo: MessagesRepository,
     private readonly requestsRepo: RequestsRepository,
@@ -81,8 +84,12 @@ export class MessagesService {
   }
 
   private notifyOtherSide(request: RequestEntity, actor: HubJwtPayload): void {
+    const toTeam = actor.userId === request.requesterId;
+    const side = toTeam ? 'team' : 'requester';
+    if (!this.messageMail.allow(request.id, side)) return;
+
     const preview = `New message on: ${request.subject}`;
-    if (actor.userId === request.requesterId) {
+    if (toTeam) {
       void this.notificationsService.notifyTeam(
         request.owningTeamId,
         preview,

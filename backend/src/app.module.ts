@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RequestsModule } from './modules/requests/requests.module';
 import { TeamsModule } from './modules/teams/teams.module';
@@ -21,6 +22,10 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 5 }],
+      errorMessage: 'Too many in a short time. Wait a minute and try again.',
+    }),
     PrismaModule,
     RequestsModule,
     TeamsModule,

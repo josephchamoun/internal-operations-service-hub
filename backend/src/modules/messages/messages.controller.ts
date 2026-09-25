@@ -8,10 +8,12 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { HubJwtPayload } from '../auth/auth.service';
 import { MAX_ATTACHMENT_BYTES, StoredUpload } from '../attachments/file-rules';
@@ -30,6 +32,8 @@ export class MessagesController {
   }
 
   @Post()
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @UseInterceptors(
     FilesInterceptor('files', 10, {
       storage: memoryStorage(),
