@@ -43,7 +43,7 @@ cd backend && npm install && npx prisma generate && npx prisma migrate dev && np
 cd frontend && npm install && npm run dev   # separate terminal
 ```
 
-**Try it:** log in as an employee (test identity picker), submit a request (optionally after an AI suggestion), then log in as a member of the owning team to claim, message, silence reminders, or change priority.
+**Try it:** sign in as `dev-employee@test.local` with password `OpsHub2026`, submit a request (optionally after an AI suggestion), then sign in as `dev-manager@test.local` with the same password to claim, message, silence reminders, or change priority. Microsoft sign-in is also on the login page when Entra is configured.
 
 **Tests** (`cd backend && npm run test && npm run test:e2e && npm run test:ai-eval`) — Week 3 cases plus messages, silence/escalation, and AI evals.
 
@@ -53,7 +53,7 @@ Product spec, architecture, data model, and ADR-001.
 
 Full request lifecycle against Prisma/SQLite: list, limited and full detail, edit while New and unclaimed, claim, unclaim, status, cancel, reassign, priority, events, access log.
 
-Authentication (Entra + `dev-login`) and per-action authorization. JWT role/team membership is reloaded from the database on each request.
+Authentication (Microsoft, or email and password) and per-action authorization. JWT role/team membership is reloaded from the database on each request. Seeded users share the password `OpsHub2026`. `POST /auth/dev-login` remains for automated tests and is disabled when `NODE_ENV=production`.
 
 React frontend for login, submit, my requests, team queue, limited/full detail, conversation, admin CRUD, access logs, and events.
 

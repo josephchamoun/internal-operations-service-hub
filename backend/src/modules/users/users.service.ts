@@ -10,6 +10,7 @@ import { v4 as uuid } from 'uuid';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { TeamsService } from '../teams/teams.service';
+import { hashPassword } from '../../common/password';
 
 @Injectable()
 export class UsersService {
@@ -49,6 +50,10 @@ export class UsersService {
     return this.repo.findByEmail(email);
   }
 
+  findCredentialByEmail(email: string) {
+    return this.repo.findCredentialByEmail(email);
+  }
+
   linkIdpSubjectId(id: string, idpSubjectId: string): Promise<UserEntity> {
     return this.repo.linkIdpSubjectId(id, idpSubjectId);
   }
@@ -62,12 +67,14 @@ export class UsersService {
         ? await this.requireTeams(dto.teamIds ?? [])
         : [];
     const role = resolveRole(requested, teamIds);
+    const passwordHash = dto.password ? await hashPassword(dto.password) : undefined;
     return this.repo.create({
       id: uuid(),
       name: dto.name.trim(),
       email,
       role,
       teamIds,
+      passwordHash,
     });
   }
 
@@ -96,6 +103,7 @@ export class UsersService {
         throw new ConflictException('Cannot deactivate the last admin');
       }
     }
+    const passwordHash = dto.password ? await hashPassword(dto.password) : undefined;
     return this.repo.update({
       id,
       name: dto.name?.trim() ?? existing.name,
@@ -103,6 +111,7 @@ export class UsersService {
       role,
       teamIds,
       active,
+      passwordHash,
     });
   }
 

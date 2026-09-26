@@ -3,10 +3,12 @@ import {
   ForbiddenException,
   InternalServerErrorException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
+import { checkPassword } from '../../common/password';
 import { UsersService } from '../users/users.service';
 import { TeamMembershipsService } from '../team-memberships/team-memberships.service';
 
@@ -91,18 +93,19 @@ export class AuthService {
     }
 
     const user = await this.resolveUser(oid, email);
-    const memberships = await this.teamMembershipsService.findByUserId(user.id);
-    const teamIds = memberships.map((m) => m.teamId);
+    return this.issueSession(user);
+  }
 
-    const payload: HubJwtPayload = {
-      userId: user.id,
-      name: user.name,
-      role: user.role,
-      teamIds,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-    return { accessToken };
+  async passwordLogin(email: string, password: string): Promise<{ accessToken: string }> {
+    const credential = await this.usersService.findCredentialByEmail(email);
+    const matches =
+      credential?.passwordHash != null &&
+      (await checkPassword(password, credential.passwordHash));
+    if (!credential || !matches) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+    this.assertActive(credential);
+    return this.issueSession(credential);
   }
 
   private requireEntra(): {
@@ -111,7 +114,7 @@ export class AuthService {
   } {
     if (!this.msalClient || !this.redirectUri) {
       throw new ServiceUnavailableException(
-        'Microsoft login is not configured. Use the test identity picker, or set AZURE_AD_CLIENT_ID, AZURE_AD_TENANT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_REDIRECT_URI in .env.',
+        'Microsoft login is not configured. Sign in with email and password, or set AZURE_AD_CLIENT_ID, AZURE_AD_TENANT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_REDIRECT_URI in .env.',
       );
     }
     return { msalClient: this.msalClient, redirectUri: this.redirectUri };
@@ -150,16 +153,22 @@ export class AuthService {
   async devLogin(userId: string): Promise<{ accessToken: string }> {
     const user = await this.usersService.findOne(userId); // throws NotFoundException if not seeded
     this.assertActive(user);
+    return this.issueSession(user);
+  }
+
+  private async issueSession(user: {
+    id: string;
+    name: string;
+    role: string;
+  }): Promise<{ accessToken: string }> {
     const memberships = await this.teamMembershipsService.findByUserId(user.id);
     const teamIds = memberships.map((m) => m.teamId);
-
     const payload: HubJwtPayload = {
       userId: user.id,
       name: user.name,
       role: user.role,
       teamIds,
     };
-
     return { accessToken: this.jwtService.sign(payload) };
   }
 

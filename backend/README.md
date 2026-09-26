@@ -67,7 +67,7 @@ Generate a `JWT_SECRET` quickly:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Only `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and `NODE_ENV` are required to boot the app and exercise the full flow via `dev-login`. Entra ID and Mailtrap are both optional — without them, real Microsoft login and real email dispatch are simply unavailable, but nothing else breaks.
+Only `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and `NODE_ENV` are required to boot the app. Seeded users can sign in with email and the shared demo password. Entra ID and Mailtrap are both optional — without them, Microsoft login and real email dispatch are simply unavailable, but nothing else breaks.
 
 ### How do I set up the database (Prisma + SQLite)?
 
@@ -85,7 +85,7 @@ If you ever change `schema.prisma`, run `npx prisma migrate dev --name <what_cha
 
 ### Setting up real login (Microsoft Entra ID) — optional
 
-Only needed if you want to test the actual "Sign in with Microsoft" flow rather than `dev-login`. Skip this section entirely if `dev-login` is enough for what you're doing.
+Only needed if you want the "Sign in with Microsoft" button. Email-and-password sign-in works without it.
 
 1. In the [Azure Portal](https://portal.azure.com), go to **Microsoft Entra ID → App registrations → New registration**.
 2. Give it any name. Under **Redirect URI**, choose **Web** and enter `http://localhost:3000/auth/callback` — this must match `AZURE_AD_REDIRECT_URI` in `.env` exactly.
@@ -95,7 +95,7 @@ Only needed if you want to test the actual "Sign in with Microsoft" flow rather 
 6. For a real user to actually be able to log in, an admin must first create a matching `User` row in this app's own database (by their email) — Entra ID only proves who someone is, it never auto-creates accounts here. Use `npx prisma studio` to add the row, or add them to `prisma/seed.ts` and re-seed.
 7. Whoever you want to test with needs a real Entra ID account (email + password) in that tenant — either your own Microsoft 365/Azure AD tenant's users, or a free Azure AD tenant you set up for this purpose.
 
-Once configured, `GET /auth/login` redirects to Microsoft's real login page. A successful login sets the same httpOnly session cookie as `dev-login` and redirects to the frontend. The token is not put in the redirect URL.
+Once configured, `GET /auth/login` redirects to Microsoft's real login page. A successful login sets the same httpOnly session cookie as email sign-in and redirects to the frontend. The token is not put in the redirect URL.
 
 ### Setting up email notifications (Mailtrap) — optional
 
@@ -126,7 +126,28 @@ Every route requires a valid session JWT. The browser does not keep that token i
 
 Postman and the automated tests can still send `Authorization: Bearer <token>` instead of the cookie. A request with neither is `401`.
 
-**Test login (`dev-login`), for local testing and the automated test suite:**
+**Email and password:**
+
+```
+POST /auth/password
+{ "email": "dev-employee@test.local", "password": "OpsHub2026" }
+```
+
+Sets the cookie and returns `{ "ok": true }`. The email is the address on the user row. The hub stores a bcrypt hash, never the password. A wrong email, a wrong password, or a user with no hash all return `401` with `Invalid email or password.` A matching hash on an inactive user returns the usual inactive-account error. This route is limited to 5 attempts per minute per IP address.
+
+After `npx prisma db seed`, every seeded user has the password `OpsHub2026`. Re-running the seed sets that password again and does not change `active`. Useful addresses:
+
+| Email | Who |
+| ----- | --- |
+| `dev-employee@test.local` | employee |
+| `ben@company.com` | employee |
+| `dev-manager@test.local` | IT team member |
+| `main@company.com` | IT and HR team member |
+| `admin-1@chamounjoseph2022outlook.onmicrosoft.com` | admin |
+
+An admin can set or change a password on the user form. Leaving it blank on edit keeps the current hash. Leaving it blank on create means that person can sign in with Microsoft only.
+
+**Test login (`dev-login`), for the automated test suite and Postman:**
 
 ```
 POST /auth/dev-login
@@ -143,11 +164,11 @@ Sets the cookie and also returns `{ "accessToken": "..." }`. This looks up a see
 
 Storage: real SQLite via Prisma (`prisma/schema.prisma`, `prisma/dev.db`). No more flat JSON files — those and the old `FileStorageService` were removed entirely when this migration happened.
 
-Auth: real, via the two paths above. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
+Auth: real, via Microsoft, email and password, or `dev-login` for tests. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
 
 Frontend: exists now, in `../frontend` (React + Vite + TypeScript), covering the full flow plus admin CRUD. See its own README.
 
-Scope: request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority), event history, access log, **admin CRUD**, **messages and attachments**, **per-user silence**, and the **escalation scheduler**. Auth is still JWT (Entra or `dev-login`). Role and team memberships are loaded from the database on every request, not trusted from the token snapshot alone.
+Scope: request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority), event history, access log, **admin CRUD**, **messages and attachments**, **per-user silence**, and the **escalation scheduler**. Auth is still JWT (Microsoft, email and password, or `dev-login`). Role and team memberships are loaded from the database on every request, not trusted from the token snapshot alone.
 
 `GET /auth/me` returns the hydrated current user (`userId`, `role`, `teamIds`).
 
@@ -311,7 +332,7 @@ backend/
 │   │       ├── prisma.module.ts
 │   │       └── prisma.service.ts
 │   └── modules/
-│       ├── auth/                 # GET /auth/login, GET /auth/callback, POST /auth/dev-login
+│       ├── auth/                 # GET /auth/login, GET /auth/callback, POST /auth/password, POST /auth/dev-login
 │       ├── requests/              # this feature's core — controller/service/repository/dto/entities
 │       ├── request-events/        # audit trail: claims, status changes, reassignments, priority changes
 │       ├── access-logs/           # who opened a request's full detail, and when

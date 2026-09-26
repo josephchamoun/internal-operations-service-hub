@@ -50,9 +50,10 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 | user_id        | PK                                 |                                                                                         |
 | idp_subject_id | unique                             | stable reference to the identity provider's identity, used for login, never for contact |
 | name           | text                               | Admin-set                                                                               |
-| email          | text                               | contact address for notifications, Admin-set                                            |
+| email          | text                               | contact address for notifications, and the username for email sign-in. Admin-set |
 | role           | enum(employee, team_member, admin) | Admin-assigned, independent of the identity provider                                    |
 | active         | boolean, default true              | Admin-set. False blocks sign-in and notification email. The row stays; requester_id, sender_id, claimed_by, and actor_id on existing records are not changed |
+| password_hash  | text, nullable                     | bcrypt hash for email sign-in. Null means that path is unavailable; Microsoft sign-in does not use it. Never returned by the API |
 | created_at     | timestamp                          |                                                                                         |
 
 **Request:** the central entity, representing one submitted request from creation to resolution.

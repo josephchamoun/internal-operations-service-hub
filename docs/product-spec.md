@@ -71,6 +71,7 @@ The system must:
 28. Every time a request's full details are opened by someone other than the requester; the owning team or the Admin, that access is logged with who and when, since the system cannot tell whether the current owning team's assignment is correct or the result of misrouting. This log is visible only to the Admin. It does not prevent the access; owning-team and Admin access is always permitted, this only makes it visible for oversight. Repeat opens of the same request by the same person within one hour do not create another log row, and the confirmation prompt is not shown again in that window. After an hour, both the prompt and a new log row apply again. No one outside the requester, the owning team, or the Admin can access a request at all, not even the limited view
 29. Before a request is saved, the requester may paste free text and ask the hub for an advisory intake suggestion. The backend sends only that draft plus the Admin-defined category, team, and priority lists to a language model. The model returns structured JSON. The backend validates every product-owned value against those lists and builds the response the requester sees (summary, request type, category, priority, owning team, suggested next step, optional self-serve hint, clarification if the text is thin or ambiguous). The suggestion never creates the request. The requester can edit or ignore it and still submit through the existing form. If the provider is down or returns unreadable output, submission still works without the suggestion.
 30. The Admin can mark a user active or inactive. An inactive user cannot sign in, even when the identity provider still accepts their email, and a session they already have fails on the next request. They receive no notification email, including escalation reminders; other members of the team still do. Their user row stays, and their name remains on existing requests, messages, claims, and logs. Those rows are not rewritten. The last active admin cannot be marked inactive.
+31. A person can also sign in with the email on their user row and a password. The hub stores only a hash of that password. Microsoft sign-in stays available and does not use this hash. A wrong email or password is refused without saying which part failed. Leaving the password blank when an admin creates or edits a user leaves email sign-in unset or unchanged. An inactive user is still refused after a matching password.
 
 ## 5. Non-Functional Requirements
 
@@ -249,10 +250,13 @@ Given the access-logging behavior above, the system does not block or prevent th
 Given an employee opens the hub, when they are not logged in, then they land on the hub's own login screen rather than any other entry point.
 
 **Identity is verified through the company identity provider**
-Given a user submits credentials on the login screen, when the hub checks them, then it verifies identity through the company's existing identity provider rather than storing or checking passwords itself.
+Given a user chooses Sign in with Microsoft, when the hub checks them, then it verifies identity through the company's existing identity provider. That path does not use the password hash stored on the user.
 
-**Identity provider outage blocks login**
-Given the identity provider is unreachable, slow, or returns an error, when a user attempts to log in, then login is blocked and a clear error is shown, rather than the hub guessing at who the person is.
+**Email and password sign-in**
+Given a user enters the email on their hub account and a password, when the hub checks them, then it compares the password with the stored hash and starts a session only when they match. A wrong email or password is refused with the same message. A user with no password hash cannot use this path.
+
+**Identity provider outage blocks Microsoft sign-in**
+Given the identity provider is unreachable, slow, or returns an error, when a user attempts to sign in with Microsoft, then that sign-in is blocked and a clear error is shown. Email-and-password sign-in still works.
 
 **No access without a session**
 Given a user has not logged in, when they attempt to view any request, queue, or filtered list, then access is denied.
@@ -283,7 +287,7 @@ Given a user's team/department affiliation as reported by the identity provider,
 Given the Admin assigns a user a role (employee, owning-team member, admin) and, for team members, one or more team memberships, when that assignment is saved, then the user's permissions in the hub reflect exactly that role and team set going forward.
 
 **Inactive user cannot sign in**
-Given the Admin has marked a user inactive, when that person authenticates with the identity provider or presents an existing hub session, then the hub refuses access. Their existing requests, messages, and log rows are unchanged.
+Given the Admin has marked a user inactive, when that person authenticates with the identity provider, signs in with email and password, or presents an existing hub session, then the hub refuses access. Their existing requests, messages, and log rows are unchanged.
 
 **Inactive user is skipped in team mail**
 Given an inactive user is still a member of the owning team, when the hub emails that team about a request or an escalation reminder, then that person is not a recipient and the other members still are.

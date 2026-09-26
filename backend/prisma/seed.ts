@@ -1,4 +1,7 @@
 import { PrismaClient, UserRole } from '@prisma/client';
+import { hashSync } from 'bcryptjs';
+
+const DEMO_PASSWORD_HASH = hashSync('OpsHub2026', 10);
 
 const prisma = new PrismaClient();
 
@@ -41,7 +44,7 @@ const users: UserRow[] = [
   { id: 'hr-agent-1', name: 'Maya HR', email: 'hragent1@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['HR'] },
   { id: 'admin-1', name: 'Jordan Admin', email: 'admin-1@chamounjoseph2022outlook.onmicrosoft.com', role: 'admin', teamIds: [] },
   { id: 'main-agent-1', name: 'HR/IT agent', email: 'main@company.com', role: 'team_member', teamIds: ['IT', 'HR'] },
-    // Dev/test-only accounts — used only by the dev-login endpoint, never via real Entra ID
+    // Short addresses for local sign-in. Same demo password as every seeded user.
   { id: 'dev-manager', name: 'IT Member (test)', email: 'dev-manager@test.local', role: 'team_member', teamIds: ['IT'] },
   { id: 'dev-employee', name: 'Employee 1 (test)', email: 'dev-employee@test.local', role: 'employee', teamIds: [] },
 ];
@@ -93,6 +96,7 @@ async function main() {
         name: user.name,
         email: user.email,
         role: user.role,
+        passwordHash: DEMO_PASSWORD_HASH,
       },
       create: {
         userId: user.id,
@@ -100,6 +104,7 @@ async function main() {
         name: user.name,
         email: user.email,
         role: user.role,
+        passwordHash: DEMO_PASSWORD_HASH,
         createdAt,
       },
     });

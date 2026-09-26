@@ -308,6 +308,7 @@ function AdminForm({
 }) {
   const [name, setName] = useState(item?.name ?? "");
   const [email, setEmail] = useState(item && "email" in item ? item.email : "");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>(
     item && "role" in item ? item.role : "employee",
   );
@@ -337,6 +338,7 @@ function AdminForm({
           role,
           teamIds: canAssignTeams ? teamIds : [],
           ...(item ? { active } : {}),
+          ...(password ? { password } : {}),
         },
         item?.id,
       );
@@ -376,6 +378,21 @@ function AdminForm({
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              placeholder={
+                item
+                  ? "Leave blank to keep the current password"
+                  : "Optional. At least 8 characters for email sign-in."
+              }
+              onChange={(event) => setPassword(event.target.value)}
             />
           </label>
           <label>

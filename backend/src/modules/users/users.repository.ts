@@ -32,6 +32,38 @@ export class UsersRepository {
     return row ? toEntity(row) : undefined;
   }
 
+  async findCredentialByEmail(email: string): Promise<
+    | {
+        id: string;
+        name: string;
+        role: UserRole;
+        active: boolean;
+        passwordHash: string | null;
+      }
+    | undefined
+  > {
+    const rows = await this.prisma.user.findMany({
+      select: {
+        userId: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        passwordHash: true,
+      },
+    });
+    const needle = email.trim().toLowerCase();
+    const row = rows.find((item) => item.email.toLowerCase() === needle);
+    if (!row) return undefined;
+    return {
+      id: row.userId,
+      name: row.name,
+      role: row.role,
+      active: row.active,
+      passwordHash: row.passwordHash,
+    };
+  }
+
   async findByEmail(email: string): Promise<UserEntity | undefined> {
     const rows = await this.prisma.user.findMany({ include: { memberships: true } });
     const needle = email.trim().toLowerCase();
@@ -47,6 +79,7 @@ export class UsersRepository {
     return this.prisma.user.count({ where: { role: UserRole.admin, active: true } });
   }
 
+  //The count of references to a user in other tables. This is used to determine if a user can be deleted.
   async countReferences(userId: string): Promise<number> {
     const [requested, claimed, messages, attachments, events, silences, accessLogs] =
       await Promise.all([
@@ -67,6 +100,7 @@ export class UsersRepository {
     email: string;
     role: UserRole;
     teamIds: string[];
+    passwordHash?: string;
   }): Promise<UserEntity> {
     const row = await this.prisma.$transaction(async (tx) => {
       await tx.user.create({
@@ -75,6 +109,7 @@ export class UsersRepository {
           name: input.name,
           email: input.email,
           role: input.role,
+          passwordHash: input.passwordHash,
           createdAt: new Date(),
         },
       });
@@ -102,6 +137,7 @@ export class UsersRepository {
     role: UserRole;
     teamIds: string[];
     active: boolean;
+    passwordHash?: string;
   }): Promise<UserEntity> {
     const row = await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
@@ -111,6 +147,7 @@ export class UsersRepository {
           email: input.email,
           role: input.role,
           active: input.active,
+          ...(input.passwordHash ? { passwordHash: input.passwordHash } : {}),
         },
       });
       await tx.teamMembership.deleteMany({ where: { userId: input.id } });

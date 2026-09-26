@@ -45,6 +45,7 @@
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/throttler": "^6.7.1",
     "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.6.1",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
     "@nestjs/testing": "^10.4.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.14.0",

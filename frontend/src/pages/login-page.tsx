@@ -1,5 +1,5 @@
+import { type FormEvent, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
-import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuth } from "../auth";
@@ -7,33 +7,20 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Loading } from "../components/loading";
 
-// TEST-ONLY — safe to delete this array and the picker UI below before any
-// real deployment. Corresponds to POST /auth/dev-login on the backend,
-// which is itself gated off when NODE_ENV=production.
-const testUsers = [
-  ["u1", "Joseph Chamoun (Employee)"],
-  ["u2", "Ben Employee (Employee)"],
-  ["it-agent-1", "Sam IT (IT team member)"],
-  ["it-agent-2", "Riley IT (IT team member)"],
-  ["hr-agent-1", "Maya HR (HR team member)"],
-  ["admin-1", "Jordan Admin (Admin)"],
-  ["main-agent-1", "HR/IT agent (IT + HR team member)"],
-  ["dev-manager", "Dev Manager (IT team member, test)"],
-  ["dev-employee", "Dev Employee (Employee, test)"],
-];
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 export function LoginPage() {
   const { user, ready, refresh, notice } = useAuth();
   const [params] = useSearchParams();
-  const [userId, setUserId] = useState(testUsers[0][0]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const microsoftUnavailable = params.get("microsoft") === "unavailable";
   const mutation = useMutation({
     mutationFn: async () => {
-      await api("/auth/dev-login", {
+      await api("/auth/password", {
         method: "POST",
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ email, password }),
       });
       const signedIn = await refresh();
       if (!signedIn) {
@@ -43,6 +30,12 @@ export function LoginPage() {
   });
   if (!ready) return <Loading />;
   if (user) return <Navigate to="/queue" replace />;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    mutation.mutate();
+  };
+
   return (
     <div className="login-shell">
       <aside className="login-intro">
@@ -62,45 +55,54 @@ export function LoginPage() {
         {notice && <p className="notice">{notice}</p>}
         {microsoftUnavailable && (
           <p className="notice warning">
-            Microsoft sign-in is not configured on this server. Use a test
-            identity below, or ask an admin to set the Azure AD environment
-            variables.
+            Microsoft sign-in is not configured on this server. Use email and
+            password, or ask an admin to set the Azure AD environment variables.
           </p>
         )}
         {params.get("microsoft") === "failed" && (
           <p className="notice warning">
             Microsoft sign-in came back, but the session could not be started.
-            Try again, or use a test identity.
+            Try again, or sign in with email and password.
           </p>
         )}
 
-        {/* REAL AUTHENTICATION — Microsoft Entra ID. This is the actual
-            login path; keep this when the test picker below is removed. */}
+        <form className="form" onSubmit={submit}>
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              required
+              type="password"
+              autoComplete="current-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          {mutation.isError && (
+            <p className="form-error">{mutation.error.message}</p>
+          )}
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+
         <a className="btn microsoft" href={`${API_BASE_URL}/auth/login`}>
           Sign in with Microsoft
         </a>
-
-        <div className="login-divider">
-          <span>or continue with a test identity</span>
-        </div>
-
-        {/* TEST-ONLY LOGIN — see comment on testUsers above. */}
-        <label>
-          Test identity
-          <select value={userId} onChange={(e) => setUserId(e.target.value)}>
-            {testUsers.map(([id, label]) => (
-              <option value={id} key={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {mutation.isError && (
-          <p className="form-error">{mutation.error.message}</p>
-        )}
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-          {mutation.isPending ? "Logging in…" : "Log in (test)"}
-        </Button>
       </Card>
     </div>
   );

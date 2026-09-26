@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -16,4 +16,9 @@ export class CreateUserDto {
   @IsArray()
   @IsString({ each: true })
   teamIds?: string[];
+
+  @ValidateIf((dto: CreateUserDto) => typeof dto.password === 'string' && dto.password.length > 0)
+  @IsString()
+  @MinLength(8)
+  password?: string;
 }

@@ -36,13 +36,15 @@ Opens on `http://localhost:5173`.
 
 The login page offers two paths:
 
-- **Test identity picker** — a dropdown of seeded users (e.g. "Dev Employee", "Dev Manager"). Calls the backend's `dev-login` endpoint. No external account needed; this is the fastest way to exercise the app.
-- **Sign in with Microsoft** — real Entra ID login. Only works if the backend has real Entra ID credentials configured (`../backend/README.md`) and you have real credentials for a seeded user's email.
+- **Email and password** — the address on the user row, plus a password. Seeded accounts share `OpsHub2026`. No Microsoft account is required.
+- **Sign in with Microsoft** — Entra ID login. Only works if the backend has Entra ID credentials configured (`../backend/README.md`) and that person's email is already a user in the hub.
+
+`POST /auth/dev-login` still exists for the automated tests. The login page does not call it.
 
 ## What's here
 
 - `src/pages/` — Login, request list, new request (optional AI suggestion + optional files, then submit), limited/full request detail (conversation, silence, actions), events, access logs, and **admin CRUD** for users/teams/categories/priorities.
-- `src/auth`, via `useAuth()` — provides `token` and `user`; `useApiQuery` and mutations both read from it.
+- `src/auth`, via `useAuth()` — provides `user`, `ready`, `refresh`, and `logout`. The session is the httpOnly cookie. `useApiQuery` and mutations run only after `user` is set.
 - `src/api/client.ts` — `api()` (JSON or `FormData`; no JSON content-type on uploads), `downloadFile()`, and `apiUrl()` for SSE.
 
 ## Authorization boundaries: both layers exist, and they're not the same one

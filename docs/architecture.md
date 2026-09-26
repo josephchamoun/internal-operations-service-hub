@@ -24,7 +24,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 **Web and app client.** The single interface everyone uses, with different views depending on role. It handles the submission form including attachments, an open message thread on each request, and a queue view that can be filtered by status, or by category for owning teams and the admin. For owning teams, the queue also shows whether a request is claimed and by whom.
 
-**Login and authentication.** The hub's own login screen. It does not store passwords itself; it hands identity verification off to the company's existing identity provider. After that check succeeds, the hub still refuses the session when the Admin has marked the user inactive, including a token that was issued before they were marked inactive.
+**Login and authentication.** The hub's own login screen. Sign-in with Microsoft hands identity verification to the company's identity provider, and the hub does not store that Microsoft password. A second path signs in with the person's email and a password the hub stores only as a hash. After either check succeeds, the hub still refuses the session when the Admin has marked the user inactive, including a token that was issued before they were marked inactive.
 
 **Operations hub backend.** The one core service and the only place business logic lives. It is the entry point every client action passes through, including submitting, asking for an intake suggestion, editing details, messaging, cancelling, claiming, unclaiming, and changing status. It handles routing, status transitions, authorization checks, reassignment, and triggers notifications. It also applies a light per-person limit on creating a request and on posting a message: 5 of each per minute, counted separately. A sixth call in that minute is refused and nothing is saved. The counts live in the backend process. Keeping this as a single service rather than splitting it up avoids the coordination overhead of running several small services, which this system's scale simply doesn't need.
 
@@ -38,7 +38,7 @@ A few forces shaped almost every design choice below: no request shouldever be s
 
 ### 2.2 External dependencies
 
-**Company identity provider.** An existing system the company already runs for logging people in. The hub relies on it purely to authenticate who someone is; it isn't assumed to also report their team or department, since that varies by provider and isn't something the hub should depend on. If this is unreachable, slow, or returns anything uncertain, the hub blocks login and submission rather than guess.
+**Company identity provider.** An existing system the company already runs for logging people in. Microsoft sign-in relies on it purely to authenticate who someone is; it isn't assumed to also report their team or department, since that varies by provider and isn't something the hub should depend on. If this is unreachable, slow, or returns anything uncertain, Microsoft sign-in is blocked. Email-and-password sign-in still works, because that check happens inside the hub.
 
 **External notification channel.** Whichever tool employees already use day to day, such as email or a chat platform, still undecided. The hub hands notifications off to it. If it's unreachable or rejects a message, the request itself is unaffected. The send is retried a few times in-process (three attempts) and then dropped; there is no durable outbox.
 
@@ -48,7 +48,7 @@ No courier, payment processor, or equipment-tracking tool is connected to this h
 
 ### 2.3 Important data flows
 
-- An employee logs in, which the login screen verifies against the identity provider. They can paste a free-text draft; the backend asks the language-model provider for a structured suggestion, validates it against the Admin-defined lists, and returns that candidate. The employee then submits a request through the client (using the suggestion or filling the form themselves), picking a category from the Admin-defined list, or "Other" with a team picked directly if none fit. That request goes straight to the backend, which validates it, saves it to the database with its status set to New, routes it to the right team based on the category chosen, and tells the notification dispatcher to alert every member of that team, since no individual is assigned to it yet.
+- An employee logs in, either through Microsoft or with their email and password. They can paste a free-text draft; the backend asks the language-model provider for a structured suggestion, validates it against the Admin-defined lists, and returns that candidate. The employee then submits a request through the client (using the suggestion or filling the form themselves), picking a category from the Admin-defined list, or "Other" with a team picked directly if none fit. That request goes straight to the backend, which validates it, saves it to the database with its status set to New, routes it to the right team based on the category chosen, and tells the notification dispatcher to alert every member of that team, since no individual is assigned to it yet.
 
 - While a request is open, the backend pushes live updates to anyone currently viewing it, whether that's the requester or the owning team, whenever the request is created, the status changes (including cancel), a message is sent, the request is claimed or unclaimed, it is reassigned, or its priority changes.
 
@@ -95,7 +95,7 @@ Each piece below lists what can go wrong and what the system does about it.
 
 - **Database**: unreachable, or a write fails partway through. The write is rejected and the user is told clearly, rather than the system pretending it succeeded.
 
-- **Company identity provider**: unreachable, slow, or returns an error. Login and submission stay blocked rather than the system guessing who someone is.
+- **Company identity provider**: unreachable, slow, or returns an error. Microsoft sign-in is blocked. Email-and-password sign-in still works. The hub does not guess who someone is.
 
 - **Notification dispatcher**: fails, errors, or is unreachable. The request stays saved as normal; the notification is retried a few times in-process and then dropped.
 
@@ -111,7 +111,7 @@ The connections between these pieces can fail on their own too, even if both sid
 
 - **Backend to database**: write fails or times out partway. It is never acknowledged to the client as successful, this is the core guarantee against losing a request.
 
-- **Login to identity provider**: times out, errors, or returns something invalid. Treated the same as the provider being down, login stays blocked.
+- **Login to identity provider**: times out, errors, or returns something invalid. Treated the same as the provider being down. Microsoft sign-in stays blocked. Email-and-password sign-in still works.
 
 - **Backend to notification dispatcher**: call fails. The request stays saved regardless; only the notification is retried in-process.
 
