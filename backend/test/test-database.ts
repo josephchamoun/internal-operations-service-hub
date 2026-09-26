@@ -5,14 +5,14 @@ import { PrismaClient } from '@prisma/client';
 config();
 
 /**
- * Points this process at the Neon test branch. The app database stays in
- * DATABASE_URL. Tests wipe every row, so they must not use that one.
+ * Points this process at the disposable database from GitHub Actions.
+ * The production database stays in DATABASE_URL. These tests wipe every row.
  */
 export function useTestDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL?.trim();
   if (!url) {
     throw new Error(
-      'TEST_DATABASE_URL is missing. Point it at the Neon test branch, not DATABASE_URL.',
+      'TEST_DATABASE_URL is missing. Database tests run in GitHub Actions and must not use DATABASE_URL.',
     );
   }
   process.env.DATABASE_URL = url;
@@ -20,7 +20,7 @@ export function useTestDatabaseUrl(): string {
 }
 
 /**
- * Returns a PrismaClient pointed at the Neon test branch.
+ * Returns a PrismaClient pointed at the GitHub Actions database.
  * Applies the current schema to it via `prisma db push` before returning.
  */
 export function createTestDatabase(): PrismaClient {

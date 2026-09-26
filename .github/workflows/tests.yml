@@ -1,11 +1,11 @@
-name: tests
+name: verify release
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  verify-release:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -21,10 +21,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    defaults:
-      run:
-        working-directory: backend
     env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ops_hub_test?sslmode=disable
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ops_hub_test?sslmode=disable
       JWT_SECRET: ci-test-secret
       JWT_EXPIRES_IN: 1h
@@ -35,8 +33,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
       - run: npm install -g npm@11.6.1
       - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
       - run: npx prisma generate
-      - run: npm run test:ci
+        working-directory: backend
+      - run: npm run verify:release
+      - run: npm --prefix backend run test:db

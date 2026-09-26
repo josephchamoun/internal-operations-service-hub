@@ -1,122 +1,32 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { hashSync } from 'bcryptjs';
 
-const DEMO_PASSWORD_HASH = hashSync('OpsHub2026', 10);
+const ADMIN_ID = 'admin-1';
+const ADMIN_EMAIL = 'admin-1@chamounjoseph2022outlook.onmicrosoft.com';
+const ADMIN_PASSWORD = 'OpsHub2026';
 
 const prisma = new PrismaClient();
 
-type TeamRow = { id: string; name: string };
-type CategoryRow = { id: string; name: string; defaultTeamId: string | null };
-type PriorityRow = { id: string; name: string; escalationWindowMinutes: number };
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  teamIds: string[];
-};
-
-const teams: TeamRow[] = [
-  { id: 'IT', name: 'IT' },
-  { id: 'HR', name: 'HR' },
-];
-
-const categories: CategoryRow[] = [
-  { id: 'laptop-issue', name: 'Laptop Issue', defaultTeamId: 'IT' },
-  { id: 'software-issue', name: 'Software Issue', defaultTeamId: 'IT' },
-  { id: 'account-access', name: 'Account / Access Request', defaultTeamId: 'IT' },
-  { id: 'hr-approval', name: 'HR Approval', defaultTeamId: 'HR' },
-  { id: 'policy-question', name: 'Policy Question', defaultTeamId: 'HR' },
-  { id: 'other', name: 'Other', defaultTeamId: null },
-];
-
-const priorities: PriorityRow[] = [
-  { id: 'Low', name: 'Low', escalationWindowMinutes: 2880 },
-  { id: 'Normal', name: 'Normal', escalationWindowMinutes: 1440 },
-  { id: 'Urgent', name: 'Urgent', escalationWindowMinutes: 120 },
-];
-
-const users: UserRow[] = [
-  { id: 'u1', name: 'Alice Employee', email: 'chamounjoseph2022_outlook.com#EXT#@chamounjoseph2022outlook.onmicrosoft.com', role: 'employee', teamIds: [] },
-  { id: 'u2', name: 'Ben Employee', email: 'ben@company.com', role: 'employee', teamIds: [] },
-  { id: 'it-agent-1', name: 'Sam IT', email: 'itagent1@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['IT'] },
-  { id: 'it-agent-2', name: 'Riley IT', email: 'it-agent-2@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['IT'] },
-  { id: 'hr-agent-1', name: 'Maya HR', email: 'hragent1@chamounjoseph2022outlook.onmicrosoft.com', role: 'team_member', teamIds: ['HR'] },
-  { id: 'admin-1', name: 'Jordan Admin', email: 'admin-1@chamounjoseph2022outlook.onmicrosoft.com', role: 'admin', teamIds: [] },
-  { id: 'main-agent-1', name: 'HR/IT agent', email: 'main@company.com', role: 'team_member', teamIds: ['IT', 'HR'] },
-    // Short addresses for local sign-in. Same demo password as every seeded user.
-  { id: 'dev-manager', name: 'IT Member (test)', email: 'dev-manager@test.local', role: 'team_member', teamIds: ['IT'] },
-  { id: 'dev-employee', name: 'Employee 1 (test)', email: 'dev-employee@test.local', role: 'employee', teamIds: [] },
-];
-
 async function main() {
-  const createdAt = new Date();
-
-  for (const team of teams) {
-    await prisma.team.upsert({
-      where: { id: team.id },
-      update: { name: team.name },
-      create: { id: team.id, name: team.name, createdAt },
-    });
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ userId: ADMIN_ID }, { email: ADMIN_EMAIL }] },
+  });
+  if (existing) {
+    console.log('Admin already exists. Skipping seed.');
+    return;
   }
 
-  for (const category of categories) {
-    await prisma.category.upsert({
-      where: { categoryId: category.id },
-      update: { name: category.name, defaultTeamId: category.defaultTeamId },
-      create: {
-        categoryId: category.id,
-        name: category.name,
-        defaultTeamId: category.defaultTeamId,
-        createdAt,
-      },
-    });
-  }
-
-  for (const priority of priorities) {
-    await prisma.priority.upsert({
-      where: { priorityId: priority.id },
-      update: {
-        name: priority.name,
-        escalationWindowMinutes: priority.escalationWindowMinutes,
-      },
-      create: {
-        priorityId: priority.id,
-        name: priority.name,
-        escalationWindowMinutes: priority.escalationWindowMinutes,
-      },
-    });
-  }
-
-  for (const user of users) {
-    await prisma.user.upsert({
-      where: { userId: user.id },
-      update: {
-        idpSubjectId: null,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        passwordHash: DEMO_PASSWORD_HASH,
-      },
-      create: {
-        userId: user.id,
-        idpSubjectId: null,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        passwordHash: DEMO_PASSWORD_HASH,
-        createdAt,
-      },
-    });
-
-    for (const teamId of user.teamIds) {
-      await prisma.teamMembership.upsert({
-        where: { userId_teamId: { userId: user.id, teamId } },
-        update: {},
-        create: { userId: user.id, teamId, createdAt },
-      });
-    }
-  }
+  await prisma.user.create({
+    data: {
+      userId: ADMIN_ID,
+      idpSubjectId: null,
+      name: 'Jordan Admin',
+      email: ADMIN_EMAIL,
+      role: 'admin',
+      passwordHash: hashSync(ADMIN_PASSWORD, 10),
+      createdAt: new Date(),
+    },
+  });
 }
 
 main()

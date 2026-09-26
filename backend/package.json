@@ -10,11 +10,17 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "db:seed": "prisma db seed",
+    "db:setup": "prisma db push && prisma db seed",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "monitor": "ts-node --project tsconfig.json src/modules/health/monitor-cli.ts",
+    "monitor:local": "npm run monitor",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:ai-eval": "jest src/modules/intake-ai/intake-ai.eval.spec.ts --runInBand",
-    "test:ci": "npm test && npm run test:e2e && npm run test:ai-eval"
+    "test:db": "jest src/modules/requests/requests.repository.integration.spec.ts --runInBand && npm run test:e2e",
+    "test:ci": "npm test && npm run test:ai-eval && npm run test:db"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -32,7 +38,11 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "testTimeout": 60000
+    "testTimeout": 60000,
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "requests.repository.integration.spec.ts"
+    ]
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

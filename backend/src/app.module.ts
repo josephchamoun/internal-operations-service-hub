@@ -18,6 +18,7 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { SilencesModule } from './modules/silences/silences.module';
 import { EscalationsModule } from './modules/escalations/escalations.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     SilencesModule,
     EscalationsModule,
     AnalyticsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
