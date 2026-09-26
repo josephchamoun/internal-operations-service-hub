@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
-import { createTestDatabase, resetFixtures } from './test-database';
+import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Write rate limits (e2e)', () => {
   let app: INestApplication;
@@ -13,7 +13,7 @@ describe('Write rate limits (e2e)', () => {
   let threadId: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = 'file:./prisma/test.db';
+    useTestDatabaseUrl();
     const testPrisma = createTestDatabase();
     await resetFixtures(testPrisma);
     await testPrisma.$disconnect();

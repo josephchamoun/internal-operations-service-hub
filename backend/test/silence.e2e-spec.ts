@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
-import { createTestDatabase, resetFixtures } from './test-database';
+import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Silence and escalation (e2e)', () => {
   let app: INestApplication;
@@ -15,7 +15,7 @@ describe('Silence and escalation (e2e)', () => {
   let requestId: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = 'file:./prisma/test.db';
+    useTestDatabaseUrl();
     process.env.ESCALATION_CHECK_INTERVAL_MS = '0';
     const testPrisma = createTestDatabase();
     await resetFixtures(testPrisma);

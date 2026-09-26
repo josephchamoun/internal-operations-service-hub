@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
-import { createTestDatabase, resetFixtures } from './test-database';
+import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Requests lifecycle (e2e)', () => {
   let app: INestApplication;
@@ -15,7 +15,7 @@ describe('Requests lifecycle (e2e)', () => {
   beforeAll(async () => {
     // Point Prisma at the isolated test database, not dev.db. Must happen
     // before AppModule (and PrismaService within it) is compiled.
-    process.env.DATABASE_URL = 'file:./prisma/test.db';
+    useTestDatabaseUrl();
 
     const testPrisma = createTestDatabase();
     await resetFixtures(testPrisma);

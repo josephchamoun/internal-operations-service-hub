@@ -1,21 +1,37 @@
 import { execSync } from 'child_process';
+import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
-const TEST_DB_PATH = 'file:./prisma/test.db';
+config();
 
 /**
- * Returns a PrismaClient pointed at a dedicated, disposable test database
- * (prisma/test.db) — never the real development database (prisma/dev.db).
+ * Points this process at the Neon test branch. The app database stays in
+ * DATABASE_URL. Tests wipe every row, so they must not use that one.
+ */
+export function useTestDatabaseUrl(): string {
+  const url = process.env.TEST_DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error(
+      'TEST_DATABASE_URL is missing. Point it at the Neon test branch, not DATABASE_URL.',
+    );
+  }
+  process.env.DATABASE_URL = url;
+  return url;
+}
+
+/**
+ * Returns a PrismaClient pointed at the Neon test branch.
  * Applies the current schema to it via `prisma db push` before returning.
  */
 export function createTestDatabase(): PrismaClient {
+  const url = useTestDatabaseUrl();
   execSync('npx prisma db push --skip-generate --accept-data-loss', {
-    env: { ...process.env, DATABASE_URL: TEST_DB_PATH },
+    env: { ...process.env, DATABASE_URL: url },
     stdio: 'ignore',
   });
 
   return new PrismaClient({
-    datasources: { db: { url: TEST_DB_PATH } },
+    datasources: { db: { url } },
   });
 }
 
