@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { EscalationsService } from '../src/modules/escalations/escalations.service';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
 import { login } from './login';
@@ -9,6 +10,7 @@ import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-da
 
 describe('Silence and escalation (e2e)', () => {
   let app: INestApplication;
+  let escalations: EscalationsService;
   let notifyTeamExcept: jest.Mock;
   let employeeToken: string;
   let managerToken: string;
@@ -51,6 +53,7 @@ describe('Silence and escalation (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
+    escalations = app.get(EscalationsService);
 
     employeeToken = await login(app, 'dev-employee');
     managerToken = await login(app, 'dev-manager');
@@ -116,14 +119,10 @@ describe('Silence and escalation (e2e)', () => {
       .expect(200);
 
     notifyTeamExcept.mockClear();
-    const future = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-    const res = await request(app.getHttpServer())
-      .post('/escalations/run')
-      .set('Authorization', `Bearer ${managerToken}`)
-      .send({ now: future })
-      .expect(201);
+    const future = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const res = await escalations.runSweep(future);
 
-    expect(res.body.reminded).toContain(requestId);
+    expect(res.reminded).toContain(requestId);
     expect(notifyTeamExcept).toHaveBeenCalledWith(
       'IT',
       ['dev-manager'],
@@ -134,12 +133,8 @@ describe('Silence and escalation (e2e)', () => {
 
   it('does not remind again before the window elapses', async () => {
     notifyTeamExcept.mockClear();
-    const res = await request(app.getHttpServer())
-      .post('/escalations/run')
-      .set('Authorization', `Bearer ${managerToken}`)
-      .send({ now: new Date().toISOString() })
-      .expect(201);
-    expect(res.body.reminded).not.toContain(requestId);
+    const res = await escalations.runSweep(new Date());
+    expect(res.reminded).not.toContain(requestId);
     expect(notifyTeamExcept).not.toHaveBeenCalled();
   });
 

@@ -19,7 +19,6 @@ import { Loading } from "../components/loading";
 import { ReassignForm } from "../components/reassign-form";
 import { RequestThread } from "../components/request-thread";
 import { SilenceToggle } from "../components/silence-toggle";
-import { TestEscalationButton } from "../components/test-escalation-button";
 import { PersonLabel } from "../components/person-label";
 import { useUserDirectory } from "../hooks/use-user-directory";
 import { isWithinFullViewWindow } from "../lib/full-view-ack";
@@ -464,9 +463,6 @@ export function FullRequestPage() {
                       Change priority
                     </Button>
                   </div>
-                )}
-                {import.meta.env.DEV && isTeamMember && (
-                  <TestEscalationButton requestId={id} />
                 )}
               </div>
             </Card>

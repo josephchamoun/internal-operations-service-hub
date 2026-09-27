@@ -57,4 +57,3 @@ The backend check is the actual boundary — it's what can't be bypassed. The UI
 ## Known limitations
 
 - Install/run is `npm install` then `npm run dev`. The backend must be up.
-- **Test reminders** on the full request page is local-dev only (`import.meta.env.DEV`); it calls `POST /escalations/run`, which the backend also disables when `NODE_ENV=production`.

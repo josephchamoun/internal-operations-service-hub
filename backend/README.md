@@ -33,7 +33,6 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
 JWT_SECRET=<any long random string>
 JWT_EXPIRES_IN=1h
 
-# production turns off the manual reminder button (POST /escalations/run).
 NODE_ENV=development
 
 # Microsoft Entra ID — real login (optional, see "Setting up real login" below)
@@ -72,7 +71,7 @@ Generate a `JWT_SECRET` quickly:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Only `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and `NODE_ENV` are required to boot the app. Microsoft sign-in needs the `AZURE_AD_*` values. Gmail needs the `MAILTRAP_*` values and `NOTIFICATIONS_FROM_EMAIL`. Groq needs `GROQ_API_KEY` for the suggestion and for the health AI check. Without those, the rest of the app still runs: email-and-password sign-in, saving a request, and submitting the form without a suggestion.
+Only `DATABASE_URL`, `JWT_SECRET`, and `JWT_EXPIRES_IN` are required to boot the app. Microsoft sign-in needs the `AZURE_AD_*` values. Gmail needs the `MAILTRAP_*` values and `NOTIFICATIONS_FROM_EMAIL`. Groq needs `GROQ_API_KEY` for the suggestion and for the health AI check. Without those, the rest of the app still runs: email-and-password sign-in, saving a request, and submitting the form without a suggestion.
 
 ### How do I set up the database (Prisma + PostgreSQL)?
 
@@ -178,7 +177,6 @@ Same JWT as everywhere else. Files are bytes in PostgreSQL (not disk paths). All
 | GET    | `/requests/:id/silence` | `{ silenced: boolean }` for **this** user. Owning-team members only. |
 | PUT    | `/requests/:id/silence` | Mute escalation reminders for this user on this request. |
 | DELETE | `/requests/:id/silence` | Un-mute. Claim and reassign also clear **that actor's** mute. |
-| POST   | `/escalations/run` | **Not production.** JWT required. Optional body `{ "now": "<ISO time>" }` to simulate the clock. Returns `{ reminded: string[] }`. |
 
 The scheduler, when the process is running and `ESCALATION_CHECK_INTERVAL_MS` is > 0, periodically loads **New + unclaimed** requests and emails owning-team members (except silenced) if that request's priority window has elapsed since `createdAt` or the last `escalation_reminder` event.
 

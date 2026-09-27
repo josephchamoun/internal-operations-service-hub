@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { EscalationsService } from './escalations.service';
-import { EscalationsController } from './escalations.controller';
 import { RequestsModule } from '../requests/requests.module';
 import { RequestEventsModule } from '../request-events/request-events.module';
 import { PrioritiesModule } from '../priorities/priorities.module';
@@ -15,7 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     SilencesModule,
     NotificationsModule,
   ],
-  controllers: [EscalationsController],
   providers: [EscalationsService],
+  exports: [EscalationsService],
 })
 export class EscalationsModule {}
