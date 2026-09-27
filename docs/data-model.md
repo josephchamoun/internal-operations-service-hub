@@ -48,9 +48,9 @@ One Category row, named 'Other,' is a permanent fixture with default_team_id lef
 | Field          | Type                               | Notes                                                                                   |
 | -------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
 | user_id        | PK                                 |                                                                                         |
-| idp_subject_id | unique                             | stable reference to the identity provider's identity, used for login, never for contact |
+| idp_subject_id | unique, nullable                   | stable reference to the identity provider's identity, used for Microsoft sign-in, never for contact. Empty until that sign-in links the account |
 | name           | text                               | Admin-set                                                                               |
-| email          | text                               | contact address for notifications, and the username for email sign-in. Admin-set |
+| email          | text, unique                       | contact address for notifications, and the username for email sign-in. Admin-set. No two users share an email |
 | role           | enum(employee, team_member, admin) | Admin-assigned, independent of the identity provider                                    |
 | active         | boolean, default true              | Admin-set. False blocks sign-in and notification email. The row stays; requester_id, sender_id, claimed_by, and actor_id on existing records are not changed |
 | password_hash  | text, nullable                     | bcrypt hash for email sign-in. Null means that path is unavailable; Microsoft sign-in does not use it. Never returned by the API |
@@ -230,7 +230,7 @@ No index was added on category alone, since the Admin's cross-team filter is inf
 
 ### Database type
 
-The hub's system of record is a relational database. A short explanation: the data here is a tightly connected network, requests joined against teams, categories, and timelines, with rules like "at most one claimant" that must always hold, which a relational database enforces directly. The full reasoning, the options considered, and what this choice commits the system to are recorded in ADR-001, in the decisions folder.
+The hub's system of record is PostgreSQL (Neon in a real run, and a temporary PostgreSQL database on GitHub for the long tests). It is a relational database. A short explanation: the data here is a tightly connected network, requests joined against teams, categories, and timelines, with rules like "at most one claimant" that must always hold, which a relational database enforces directly. The full reasoning, the options considered, and what this choice commits the system to are recorded in ADR-001, in the decisions folder.
 
 ### What is durable versus derived
 

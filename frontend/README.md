@@ -4,7 +4,7 @@ React (Vite + TypeScript) client for the Service Request flow. Talks to the Nest
 
 ## Prerequisites
 
-- Node.js v18+
+- Node.js 22
 - The backend running (see `../backend/README.md`) — this app has nothing to talk to without it.
 
 ## Install
@@ -36,14 +36,14 @@ Opens on `http://localhost:5173`.
 
 The login page offers two paths:
 
-- **Email and password** — the address on the user row, plus a password. Seeded accounts share `OpsHub2026`. No Microsoft account is required.
+- **Email and password** — the address on the user row, plus a password. A fresh database has one admin, created by `prisma db seed` only if that user is missing. The email and password are in `backend/prisma/seed.ts`. No Microsoft account is required.
 - **Sign in with Microsoft** — Entra ID login. Only works if the backend has Entra ID credentials configured (`../backend/README.md`) and that person's email is already a user in the hub.
 
 `POST /auth/dev-login` still exists for the automated tests. The login page does not call it.
 
 ## What's here
 
-- `src/pages/` — Login, request list, new request (optional AI suggestion + optional files, then submit), limited/full request detail (conversation, silence, actions), events, access logs, and **admin CRUD** for users/teams/categories/priorities.
+- `src/pages/` — Login, request list, new request (optional AI suggestion + optional files, then submit), limited/full request detail (conversation, silence, actions), events, access logs, and **admin CRUD** for users/teams/categories/priorities. The team queue filters by status, priority, claim, and category. An admin, or someone on more than one team, can also filter by team.
 - `src/auth`, via `useAuth()` — provides `user`, `ready`, `refresh`, and `logout`. The session is the httpOnly cookie. `useApiQuery` and mutations run only after `user` is set.
 - `src/api/client.ts` — `api()` (JSON or `FormData`; no JSON content-type on uploads), `downloadFile()`, and `apiUrl()` for SSE.
 
@@ -58,6 +58,5 @@ The backend check is the actual boundary — it's what can't be bypassed. The UI
 
 ## Known limitations
 
-- Install/run is unchanged: `npm install` then `npm run dev`, backend must be up.
-- Queue filters are status, priority, and claim — not category.
+- Install/run is `npm install` then `npm run dev`. The backend must be up.
 - **Test reminders** on the full request page is local-dev only (`import.meta.env.DEV`); it calls `POST /escalations/run`, which the backend also disables when `NODE_ENV=production`.

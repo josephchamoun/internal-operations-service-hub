@@ -1,80 +1,56 @@
 # Internal Operations Service Hub
 
-A single, trackable entry point for internal employee requests, starting with IT and HR. Employees submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox. This replaces those informal channels with one system of record.
+A single, trackable entry point for internal employee requests, starting with IT and HR. Employees submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox.
 
-## Status: current branch `week4/ai-assistant`
+## What the running app is
 
-The hub now covers the Week 3 request lifecycle **plus** Week 4 AI intake **plus** the remaining product pieces that used to be schema-only: admin CRUD, messages and file attachments, per-user silence, and the escalation reminder scheduler.
+PostgreSQL on Neon. Sign-in with Microsoft or with email and password. Notifications go out through Gmail (SMTP). The intake suggestion uses Groq and is optional: without a key, the ordinary submit form still works. Files are stored in the database.
 
-Install and run are unchanged (backend + frontend READMEs). A Groq API key is still optional; without it, the ordinary submit form works.
+`GET /health` checks the database and Groq and is protected with its own username and password. `npm run monitor` is a separate process that calls health about every 2 seconds. The release check is `npm run verify:release`. GitHub runs that check on every push, then runs the long database tests on a temporary database. Details are in `docs/week5-release-operations.md`.
 
-## What has been built so far
+The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignments. They are left as they were. This file describes the app as it runs now.
 
-Work in this repo, in order:
+## What has been built
 
-1. **Product design** — `docs/product-spec.md`, `docs/architecture.md`, `docs/data-model.md`, and `docs/decisions/ADR-001.md` (why a relational database).
-2. **Week 2** — NestJS request lifecycle against a stand-in store: create, limited/full view, claim, unclaim, status, cancel, reassign, priority, events, access log. See `docs/week2-agentic-workflow.md`.
-3. **Week 3** — Real SQLite (Prisma), Entra ID + test `dev-login`, per-action authorization, React frontend, Mailtrap notifications, SSE live updates. See `docs/week3-full-stack-delivery.md`.
-4. **Week 4 AI** — Advisory Groq suggestion before submit (`POST /requests/interpret`). See `docs/week4-production-ai.md`.
-5. **On top of that (same repo)**  
-   - Admin can create, edit, and delete users, teams, categories, and priorities (with the locked `Other` / `Normal` rules).  
-   - Requester and owning team can message on a request until it is Resolved or Cancelled; files (images, PDF, Word, txt, 5MB) store as SQLite blobs; invalid files do not leave an empty message.  
-   - Owning-team members can silence **escalation reminders** for themselves on one request; claim or reassign clears *their* mute.  
-   - A background sweep looks at New + unclaimed requests on an interval (default 2 hours) and emails the team when that request’s **priority window** has elapsed, skipping silenced members. Local Vite also has a **Test reminders** control so you do not wait hours.
+1. **Product design** — `docs/product-spec.md`, `docs/architecture.md`, `docs/data-model.md`, and `docs/decisions/ADR-001.md`.
+2. **Week 2** — `docs/week2-agentic-workflow.md`.
+3. **Week 3** — `docs/week3-full-stack-delivery.md`.
+4. **Week 4 AI** — advisory Groq suggestion before submit (`POST /requests/interpret`). See `docs/week4-production-ai.md`.
+5. **Week 5** — release check, protected health, monitor, and written recovery. See `docs/week5-release-operations.md`.
+6. **On top of the request flow**
+   - Admin can create, edit, and delete users, teams, categories, and priorities (with the locked `Other` / `Normal` rules).
+   - Requester and owning team can message on a request until it is Resolved or Cancelled. Files (images, PDF, Word, txt, 5MB) are stored in PostgreSQL. An invalid file does not leave an empty message.
+   - Owning-team members can silence escalation reminders for themselves on one request. Claim or reassign clears that person's mute.
+   - A background sweep looks at New, unclaimed requests and emails the team when that request's priority window has elapsed, skipping silenced members.
+   - The team queue can be filtered by status, priority, claim, and category. An admin, or someone on more than one team, can also filter by team.
 
 ## Where to start
 
-1. `docs/product-spec.md` — what the system needs to do.  
-2. `docs/architecture.md` — components and data flows.  
-3. `docs/data-model.md` — what is stored.  
-4. `docs/decisions/ADR-001.md` — why relational.  
-5. `docs/week3-full-stack-delivery.md` — auth, frontend, notifications, SSE.  
-6. `docs/week4-production-ai.md` — intake suggestion and eval command.
+1. `docs/product-spec.md` — what the system needs to do.
+2. `docs/architecture.md` — components and data flows.
+3. `docs/data-model.md` — what is stored.
+4. `docs/decisions/ADR-001.md` — why a relational database.
+5. `docs/week5-release-operations.md` — the release command, health, the monitor, and recovery.
 
-## Install, run, and test
+## Install and run
 
-Setup details live in:
-
-- `backend/README.md` — env, Entra, Mailtrap, Groq, Prisma, endpoints, tests.  
-- `frontend/README.md` — Vite, login, what screens exist.
+Setup details live in `backend/README.md` and `frontend/README.md`.
 
 ```bash
-cd backend && npm install && npx prisma generate && npx prisma migrate dev && npx prisma db seed && npm run start:dev
-cd frontend && npm install && npm run dev   # separate terminal
+cd backend && npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run start:dev
+cd frontend && npm install && npm run dev
 ```
 
-**Try it:** sign in as `dev-employee@test.local` with password `OpsHub2026`, submit a request (optionally after an AI suggestion), then sign in as `dev-manager@test.local` with the same password to claim, message, silence reminders, or change priority. Microsoft sign-in is also on the login page when Entra is configured.
+Seed creates one admin, Jordan Admin, and only when that user is missing. It does not rewrite people who are already in the database. The admin's email and password are in `backend/prisma/seed.ts`.
 
-**Tests** (`cd backend && npm run test && npm run test:e2e && npm run test:ai-eval`) — Week 3 cases plus messages, silence/escalation, and AI evals.
+`npm run start:dev` is for editing: the API restarts when you save a file. After a release build, `npm --prefix backend run start:prod` runs the compiled API (`node dist/main`) and does not watch files.
 
-## What's done
+## Tests
 
-Product spec, architecture, data model, and ADR-001.
+On your computer, from the repo root, `npm run verify:release` builds both apps, typechecks the backend, and runs the unit tests and the AI evals. It does not run the long tests, because those wipe rows and this command uses the live Neon database.
 
-Full request lifecycle against Prisma/SQLite: list, limited and full detail, edit while New and unclaimed, claim, unclaim, status, cancel, reassign, priority, events, access log.
+GitHub runs `verify:release` and then `npm --prefix backend run test:db` on a temporary Postgres database. `test:db` is the integration spec plus the end-to-end tests.
 
-Authentication (Microsoft, or email and password) and per-action authorization. JWT role/team membership is reloaded from the database on each request. Seeded users share the password `OpsHub2026`. `POST /auth/dev-login` remains for automated tests and is disabled when `NODE_ENV=production`.
+## What's not on a host yet
 
-React frontend for login, submit, my requests, team queue, limited/full detail, conversation, admin CRUD, access logs, and events.
-
-Email (Mailtrap, fire-and-forget) on new request, unclaim, reassignment, status change, new message, and escalation reminders. Message email waits two minutes before another note to the same side on that request.
-
-SSE live updates on an open request.
-
-Admin CRUD for users, teams, categories, and priorities.
-
-Messages and attachments (including replace/delete while New and unclaimed, by the uploader).
-
-Per-user silence and the escalation scheduler.
-
-AI advisory intake.
-
-Creating a request and posting a message are each limited to 5 per person per minute.
-
-## What's not built yet
-
-No CI/CD, deployment, monitoring, or production infrastructure.
-
-Queue filters cover status, priority, and claim state; there is still no **category** filter on the team list (product spec item 22).
-
-
+The release check, health, and the monitor command are in the repo. The API is not deployed to a hosting service, and nothing starts the monitor for you. When a host exists, the API starts with `start:prod`, and the monitor is a second program with `HEALTH_URL` set to that host's `/health`.
