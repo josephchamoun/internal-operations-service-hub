@@ -19,7 +19,7 @@
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:ai-eval": "jest src/modules/intake-ai/intake-ai.eval.spec.ts --runInBand",
-    "test:db": "jest src/modules/requests/requests.repository.integration.spec.ts --runInBand && npm run test:e2e",
+    "test:db": "jest src/modules/requests/requests.repository.integration.spec.ts --runInBand --testPathIgnorePatterns=/node_modules/ && npm run test:e2e",
     "test:ci": "npm test && npm run test:ai-eval && npm run test:db"
   },
   "jest": {
