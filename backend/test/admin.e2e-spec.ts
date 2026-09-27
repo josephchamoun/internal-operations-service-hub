@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
+import { login } from './login';
 import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Admin reference-data CRUD (e2e)', () => {
@@ -31,15 +32,8 @@ describe('Admin reference-data CRUD (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 
-    const adminRes = await request(app.getHttpServer())
-      .post('/auth/dev-login')
-      .send({ userId: 'admin-1' });
-    adminToken = adminRes.body.accessToken;
-
-    const employeeRes = await request(app.getHttpServer())
-      .post('/auth/dev-login')
-      .send({ userId: 'dev-employee' });
-    employeeToken = employeeRes.body.accessToken;
+    adminToken = await login(app, 'admin-1');
+    employeeToken = await login(app, 'dev-employee');
   });
 
   afterAll(async () => {

@@ -1,6 +1,9 @@
 import { execSync } from 'child_process';
+import { hashSync } from 'bcryptjs';
 import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+export const TEST_PASSWORD = 'TestLogin2026';
 
 config();
 
@@ -76,12 +79,13 @@ export async function resetFixtures(prisma: PrismaClient): Promise<void> {
     ],
   });
 
+  const passwordHash = hashSync(TEST_PASSWORD, 10);
   await prisma.user.createMany({
     data: [
-      { userId: 'u1', idpSubjectId: null, name: 'Test Employee', email: 'test-employee@test.local', role: 'employee', createdAt: now },
-      { userId: 'dev-manager', idpSubjectId: null, name: 'Test Manager', email: 'test-manager@test.local', role: 'team_member', createdAt: now },
-      { userId: 'dev-employee', idpSubjectId: null, name: 'Test Dev Employee', email: 'test-dev-employee@test.local', role: 'employee', createdAt: now },
-      { userId: 'admin-1', idpSubjectId: null, name: 'Test Admin', email: 'test-admin@test.local', role: 'admin', createdAt: now },
+      { userId: 'u1', idpSubjectId: null, name: 'Test Employee', email: 'test-employee@test.local', role: 'employee', passwordHash, createdAt: now },
+      { userId: 'dev-manager', idpSubjectId: null, name: 'Test Manager', email: 'test-manager@test.local', role: 'team_member', passwordHash, createdAt: now },
+      { userId: 'dev-employee', idpSubjectId: null, name: 'Test Dev Employee', email: 'test-dev-employee@test.local', role: 'employee', passwordHash, createdAt: now },
+      { userId: 'admin-1', idpSubjectId: null, name: 'Test Admin', email: 'test-admin@test.local', role: 'admin', passwordHash, createdAt: now },
     ],
   });
 

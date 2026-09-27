@@ -37,9 +37,8 @@ export class AuthService {
     const clientSecret = this.configService.get<string>('AZURE_AD_CLIENT_SECRET')?.trim();
     const redirectUri = this.configService.get<string>('AZURE_AD_REDIRECT_URI')?.trim();
 
-    // Entra ID is optional. Testers can boot the app with only JWT + DATABASE_URL
-    // and use POST /auth/dev-login. Real Microsoft login is wired only when all
-    // four AZURE_AD_* values are present.
+    // Entra ID is optional. Email-and-password sign-in works without it.
+    // Microsoft login is wired only when all four AZURE_AD_* values are present.
     if (!clientId || !tenantId || !clientSecret || !redirectUri) {
       this.msalClient = null;
       this.redirectUri = null;
@@ -148,13 +147,6 @@ export class AuthService {
     );
   }
 
-
-  // This is a development-only endpoint that allows you to log in as any seeded user without going through Microsoft authentication.
-  async devLogin(userId: string): Promise<{ accessToken: string }> {
-    const user = await this.usersService.findOne(userId); // throws NotFoundException if not seeded
-    this.assertActive(user);
-    return this.issueSession(user);
-  }
 
   private async issueSession(user: {
     id: string;

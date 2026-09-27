@@ -39,8 +39,6 @@ The login page offers two paths:
 - **Email and password** — the address on the user row, plus a password. A fresh database has one admin, created by `prisma db seed` only if that user is missing. The email and password are in `backend/prisma/seed.ts`. No Microsoft account is required.
 - **Sign in with Microsoft** — Entra ID login. Only works if the backend has Entra ID credentials configured (`../backend/README.md`) and that person's email is already a user in the hub.
 
-`POST /auth/dev-login` still exists for the automated tests. The login page does not call it.
-
 ## What's here
 
 - `src/pages/` — Login, request list, new request (optional AI suggestion + optional files, then submit), limited/full request detail (conversation, silence, actions), events, access logs, and **admin CRUD** for users/teams/categories/priorities. The team queue filters by status, priority, claim, and category. An admin, or someone on more than one team, can also filter by team.

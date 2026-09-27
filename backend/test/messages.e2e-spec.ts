@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
+import { login } from './login';
 import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Messages and attachments (e2e)', () => {
@@ -32,21 +33,9 @@ describe('Messages and attachments (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 
-    employeeToken = (
-      await request(app.getHttpServer())
-        .post('/auth/dev-login')
-        .send({ userId: 'dev-employee' })
-    ).body.accessToken;
-    managerToken = (
-      await request(app.getHttpServer())
-        .post('/auth/dev-login')
-        .send({ userId: 'dev-manager' })
-    ).body.accessToken;
-    adminToken = (
-      await request(app.getHttpServer())
-        .post('/auth/dev-login')
-        .send({ userId: 'admin-1' })
-    ).body.accessToken;
+    employeeToken = await login(app, 'dev-employee');
+    managerToken = await login(app, 'dev-manager');
+    adminToken = await login(app, 'admin-1');
 
     const created = await request(app.getHttpServer())
       .post('/requests')

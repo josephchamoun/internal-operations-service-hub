@@ -33,8 +33,7 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
 JWT_SECRET=<any long random string>
 JWT_EXPIRES_IN=1h
 
-# Gates the /auth/dev-login test endpoint — must NOT be "production" for
-# dev-login to work (required)
+# production turns off the manual reminder button (POST /escalations/run).
 NODE_ENV=development
 
 # Microsoft Entra ID — real login (optional, see "Setting up real login" below)
@@ -147,15 +146,6 @@ Sets the cookie and returns `{ "ok": true }`. The email is the address on the us
 
 `npx prisma db seed` creates Jordan Admin only when that user is missing. It does not reset anyone's password. The admin email and password are in `prisma/seed.ts`. An admin can set or change a password on the user form. Leaving it blank on edit keeps the current hash. Leaving it blank on create means that person can sign in with Microsoft only.
 
-**Test login (`dev-login`), for the automated test suite and Postman:**
-
-```
-POST /auth/dev-login
-{ "userId": "dev-manager" }   // or "dev-employee"
-```
-
-Sets the cookie and also returns `{ "accessToken": "..." }`. This looks up a user by id, skipping Microsoft and the password. It issues the same kind of session as real login. It is disabled when `NODE_ENV=production`.
-
 **Real login, via Microsoft Entra ID** (only if configured, see above):
 
 `GET /auth/login` → redirects to Microsoft → after a real login, `GET /auth/callback` exchanges the result for this app's own JWT, sets the cookie, and redirects to the frontend.
@@ -164,11 +154,11 @@ Sets the cookie and also returns `{ "accessToken": "..." }`. This looks up a use
 
 Storage: PostgreSQL via Prisma (`prisma/schema.prisma`, `DATABASE_URL` on Neon). Attachments are bytes in that same database.
 
-Auth: real, via Microsoft, email and password, or `dev-login` for tests. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
+Auth: Microsoft, or email and password. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
 
 Frontend: exists now, in `../frontend` (React + Vite + TypeScript), covering the full flow plus admin CRUD. See its own README.
 
-Scope: request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority), event history, access log, **admin CRUD**, **messages and attachments**, **per-user silence**, and the **escalation scheduler**. Auth is still JWT (Microsoft, email and password, or `dev-login`). Role and team memberships are loaded from the database on every request, not trusted from the token snapshot alone.
+Scope: request lifecycle (create, view, edit details, claim, unclaim, update status, cancel, reassign, change priority), event history, access log, **admin CRUD**, **messages and attachments**, **per-user silence**, and the **escalation scheduler**. Auth is JWT from Microsoft or from email and password. Role and team memberships are loaded from the database on every request, not trusted from the token snapshot alone.
 
 `GET /auth/me` returns the hydrated current user (`userId`, `role`, `teamIds`).
 
@@ -268,9 +258,9 @@ All errors follow Nest's standard shape:
 
 ## Try it in Postman
 
-The steps below call `dev-login` as `dev-employee` and `dev-manager`. Those users exist in the long tests' temporary database. On Neon they exist only if they are already stored there. `dev-login` is refused when `NODE_ENV` is `production`.
+Sign in with `POST /auth/password` as a user who already exists in Neon. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. The long tests on GitHub create their own users and sign in the same way.
 
-1. `POST /auth/dev-login` with `{ "userId": "dev-employee" }`. Copy the `accessToken` and set `Authorization: Bearer <token>` on every request below. The response also sets the `access_token` cookie, so Postman's cookie jar can send that instead of the header.
+1. `POST /auth/password` with the user's email and password.
 
 2. `POST /requests`
 
@@ -284,15 +274,15 @@ The steps below call `dev-login` as `dev-employee` and `dev-manager`. Those user
 
    Copy the returned `id`. `owningTeamId` is derived automatically from the category.
 
-3. Get a second token: `POST /auth/dev-login` with `{ "userId": "dev-manager" }` — this identity is on the `IT` team, so it can act on the request above.
+3. Sign in again with `POST /auth/password` as someone on the owning team, so that person can act on the request above.
 
-4. `PATCH /requests/{id}/claim` using the `dev-manager` token (no body needed).
+4. `PATCH /requests/{id}/claim` while signed in as the team member (no body needed).
 
-5. `PATCH /requests/{id}/status` using the `dev-manager` token: `{ "status": "In Progress" }`.
+5. `PATCH /requests/{id}/status` as that team member: `{ "status": "In Progress" }`.
 
-6. `GET /requests/{id}/full` using the `dev-employee` token — full detail, since they're the requester.
+6. Sign back in as the requester and `GET /requests/{id}/full` — full detail, since they're the requester.
 
-7. Try step 4 again using the `dev-employee` token instead — expect `403`, since they're not on the owning team. This is the authorization boundary from the assignment, live.
+7. Try step 4 again as the requester — expect `403`, since they're not on the owning team. This is the authorization boundary from the assignment, live.
 
 ## Running the automated tests
 
@@ -326,7 +316,7 @@ backend/
 │   │       ├── prisma.module.ts
 │   │       └── prisma.service.ts
 │   └── modules/
-│       ├── auth/                 # GET /auth/login, GET /auth/callback, POST /auth/password, POST /auth/dev-login
+│       ├── auth/                 # GET /auth/login, GET /auth/callback, POST /auth/password
 │       ├── requests/              # this feature's core — controller/service/repository/dto/entities
 │       ├── request-events/        # audit trail: claims, status changes, reassignments, priority changes
 │       ├── access-logs/           # who opened a request's full detail, and when

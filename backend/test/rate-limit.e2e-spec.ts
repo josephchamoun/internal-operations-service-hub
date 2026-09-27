@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
+import { login } from './login';
 import { createTestDatabase, resetFixtures, useTestDatabaseUrl } from './test-database';
 
 describe('Write rate limits (e2e)', () => {
@@ -35,16 +36,8 @@ describe('Write rate limits (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 
-    employeeToken = (
-      await request(app.getHttpServer())
-        .post('/auth/dev-login')
-        .send({ userId: 'dev-employee' })
-    ).body.accessToken;
-    managerToken = (
-      await request(app.getHttpServer())
-        .post('/auth/dev-login')
-        .send({ userId: 'dev-manager' })
-    ).body.accessToken;
+    employeeToken = await login(app, 'dev-employee');
+    managerToken = await login(app, 'dev-manager');
   }, 30000);
 
   afterAll(async () => {

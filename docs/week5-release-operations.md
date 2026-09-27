@@ -55,7 +55,7 @@ Required names, values stay out of git:
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                                                                                 | Neon connection for a real run. GitHub replaces it with the temporary database.                                                                                                        |
 | `JWT_SECRET`, `JWT_EXPIRES_IN`                                                                 | Session signing.                                                                                                                                                                       |
-| `NODE_ENV`                                                                                     | `production` turns off `POST /auth/dev-login`.                                                                                                                                         |
+| `NODE_ENV`                                                                                     | `production` turns off the manual reminder button, `POST /escalations/run`.                                                                                                           |
 | `AZURE_AD_CLIENT_ID`, `AZURE_AD_TENANT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_REDIRECT_URI`  | Microsoft sign-in. Email-and-password sign-in works without them.                                                                                                                      |
 | `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS`, `NOTIFICATIONS_FROM_EMAIL` | Gmail over SMTP. The names stay `MAILTRAP_*` because that is what the mail code reads. Host `smtp.gmail.com`, port `587`. User and from address are the sending Gmail. The password is a Google app password. The request is already saved if a send fails. |
 | `GROQ_API_KEY`                                                                                 | Suggestion and the health AI check. `GROQ_MODEL` defaults to `openai/gpt-oss-20b`. The health check calls `https://api.groq.com/openai/v1/models` and does not read a URL from `.env`. |
@@ -105,7 +105,7 @@ If the API process is down, the API cannot write a log. The monitor prints that 
 | Critical smoke       | the GitHub long tests passed: create, claim, message, silence, escalation, admin, rate limit                  | that suite failed or was not run                       |
 | Recovery             | the matching row in section 7 is the step you would take                                                      | a failure with no written step                         |
 
-The long tests sign in through `POST /auth/dev-login`. That route returns `403` when `NODE_ENV` is `production`. Mail in those tests is a stand-in, so they do not send a real message. A Microsoft browser login is not part of this suite.
+The long tests sign in with `POST /auth/password`, the same door as the website. Mail in those tests is a stand-in, so they do not send a real message. A Microsoft browser login is not part of this suite.
 
 ## 7. Failures and recovery
 
