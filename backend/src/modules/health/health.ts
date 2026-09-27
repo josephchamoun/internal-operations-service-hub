@@ -1,11 +1,9 @@
 import { timingSafeEqual } from 'crypto';
-import { execSync } from 'child_process';
 
 export type CheckState = 'ok' | 'not-ok';
 
 export interface HealthReport {
   status: CheckState;
-  version: string;
   checks: {
     database: CheckState;
     ai: CheckState;
@@ -23,24 +21,6 @@ export const initialMonitorState: MonitorState = {
   consecutiveNonOk: 0,
   alertOpen: false,
 };
-
-export function releaseSha(): string {
-  const fromEnv = [
-    process.env.GIT_SHA,
-    process.env.RENDER_GIT_COMMIT,
-    process.env.GITHUB_SHA,
-  ].find((value) => value && value.trim());
-  if (fromEnv) return fromEnv.trim();
-  try {
-    return execSync('git rev-parse HEAD', {
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-      .toString()
-      .trim();
-  } catch {
-    return 'unknown';
-  }
-}
 
 export function safeFailureReason(error: unknown): string {
   const message = error instanceof Error ? error.message : 'unknown failure';

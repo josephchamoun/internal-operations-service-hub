@@ -1,14 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { HealthReport, releaseSha, safeFailureReason } from './health';
+import { HealthReport, safeFailureReason } from './health';
 
 const GROQ_MODELS_URL = 'https://api.groq.com/openai/v1/models';
 
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
-  private readonly version = releaseSha();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -24,7 +23,6 @@ export class HealthService {
     const ai = aiOk ? 'ok' : 'not-ok';
     return {
       status: databaseOk && aiOk ? 'ok' : 'not-ok',
-      version: this.version,
       checks: { database, ai },
     };
   }
