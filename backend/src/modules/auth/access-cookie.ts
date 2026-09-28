@@ -5,7 +5,7 @@ export const ACCESS_COOKIE = 'access_token';
 const cookieBase = {
   httpOnly: true,
   secure: true,
-  sameSite: 'none' as const,
+  sameSite: 'lax' as const,
   path: '/',
 };
 

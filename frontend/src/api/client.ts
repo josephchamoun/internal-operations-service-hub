@@ -1,4 +1,8 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+// Dev talks to the API on another port. A production build uses this same
+// site, so requests stay relative and the session cookie is first-party.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV ? "http://localhost:3000" : "");
 
 export class ApiError extends Error {
   status: number;
@@ -18,7 +22,7 @@ export async function api<T>(
   }
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers,
       credentials: "include",
@@ -48,7 +52,7 @@ export async function downloadFile(
   path: string,
   fileName?: string,
 ): Promise<void> {
-  const response = await fetch(`${BASE_URL}${path}`, { credentials: "include" });
+  const response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include" });
   if (!response.ok) {
     throw new ApiError(response.status, "Could not download the file");
   }
@@ -60,4 +64,4 @@ export async function downloadFile(
   link.click();
   URL.revokeObjectURL(url);
 }
-export const apiUrl = (path: string) => `${BASE_URL}${path}`;
+export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;

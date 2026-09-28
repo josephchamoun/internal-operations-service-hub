@@ -29,12 +29,15 @@ export class AuthController {
 
   @Get('callback')
   async callback(@Query('code') code: string, @Res() res: Response) {
-    const { accessToken } = await this.authService.handleCallback(code);
     const frontendUrl = (
       this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
     ).replace(/\/$/, '');
+    if (!code) {
+      return res.redirect(`${frontendUrl}/login`);
+    }
+    const { accessToken } = await this.authService.handleCallback(code);
     setAccessCookie(res, accessToken);
-    return res.redirect(`${frontendUrl}/auth/callback`);
+    return res.redirect(`${frontendUrl}/`);
   }
 
   @Post('password')

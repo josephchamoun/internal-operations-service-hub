@@ -1,14 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { API_BASE_URL, api } from "../api/client";
 import { useAuth } from "../auth";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Loading } from "../components/loading";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 export function LoginPage() {
   const { user, ready, refresh, notice } = useAuth();
