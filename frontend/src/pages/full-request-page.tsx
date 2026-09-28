@@ -220,9 +220,11 @@ export function FullRequestPage() {
     <div className="full-request">
       <div className="page-heading detail-title">
         <div>
-          <Link to={`/requests/${id}`} className="back">
-            ← Limited view
-          </Link>
+          {!isRequester && (
+            <Link to={`/requests/${id}`} className="back">
+              ← Limited view
+            </Link>
+          )}
           <h1>{request.subject}</h1>
           <div className="badges">
             <StatusBadge status={request.status} />
