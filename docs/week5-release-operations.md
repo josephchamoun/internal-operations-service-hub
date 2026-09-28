@@ -70,6 +70,8 @@ Required names, values stay out of git:
 | `MONITOR_INTERVAL_MS`                                                                          | Time between monitor checks. Default `2000`.                                                                                                                                           |
 | `ESCALATION_CHECK_INTERVAL_MS`                                                                 | Reminder sweep. `0` turns the timer off.                                                                                                                                               |
 
+Mail is tested locally. With the Gmail SMTP settings above in `backend/.env`, start the API on your computer and create a request for a team that has an active member. The message is sent to that member, and the sending Gmail account shows it in Sent. The request is still saved if the send fails. Render's free plan blocks outbound ports `25`, `465`, and `587`, so this send times out there. A paid Render instance can use port `587` with the same settings.
+
 After `verify:release` has built the backend, start that built copy with `npm --prefix backend run start:prod`. `--prefix backend` means “run this script inside the backend folder.” The script is `node dist/main`: Node runs the compiled API. `npm run start:dev` is the other one, for editing, and it restarts when you save a file.
 
 ## 5. Health and the monitor
@@ -123,7 +125,7 @@ Writing the row is not the recovery. The API-process row is performed by hand on
 | API process           | The monitor says the API could not be reached. The API writes no log of its own.                | Start the API again (`start:prod` for a built release). The monitor keeps running only if it is a separate process.                                                              |
 | Wrong health password | `401`, and no health body.                                                                      | Set `HEALTH_USER` and `HEALTH_PASSWORD` to the pair the monitor sends. Restart both processes.                                                                                   |
 | Microsoft sign-in     | The Microsoft button fails. Email-and-password sign-in still works.                             | Confirm the four `AZURE_AD_*` values. The app secret `local-dev` expires in 2028; after that date, create a new secret, put it in `AZURE_AD_CLIENT_SECRET`, and restart the API. |
-| Mail                  | The request, message, or reminder is saved. The log says the send failed.                       | Set `MAILTRAP_HOST` to `smtp.gmail.com`, port `587`, `MAILTRAP_USER` and `NOTIFICATIONS_FROM_EMAIL` to the sending Gmail, and `MAILTRAP_PASS` to that account’s app password with the spaces removed. Restart the API. Gmail’s daily send cap clears on its own. |
+| Mail                  | The request, message, or reminder is saved. Locally the send can be repeated and checked in the sending Gmail account's Sent folder. On Render's free plan the log shows the connection timing out, because ports `25`, `465`, and `587` are blocked. | On your computer, set `MAILTRAP_HOST` to `smtp.gmail.com`, port `587`, `MAILTRAP_USER` and `NOTIFICATIONS_FROM_EMAIL` to the sending Gmail, and `MAILTRAP_PASS` to that account’s app password with the spaces removed. Restart the API. On Render, use a paid instance so port `587` is open. Gmail’s daily send cap clears on its own. |
 | Release check         | `verify:release` stops on a red step.                                                            | That commit is not the release. Fix the failure and run the command again.                                                                                                       |
 | Escalation sweep      | A reminder is late. Nothing already saved is lost.                                              | The next sweep tries again. `ESCALATION_CHECK_INTERVAL_MS=0` turns the timer off.                                                                                                |
 
@@ -165,7 +167,7 @@ The site stops loading. Render's edge still answers, with an HTML page instead o
 
 ### Recovery
 
-On the same Render service, choose Resume. Leave the monitor running. The first checks can still say `degraded` while the process is starting. The recovery is done when the monitor prints `RESOLVED` and the line includes `database=ok ai=ok`.
+On the same Render service, choose Resume. Leave the monitor running. This service is on Render's free plan, so coming back takes a minute or more. The first checks can still say `degraded` while the process is starting. The recovery is done when the monitor prints `RESOLVED` and the line includes `database=ok ai=ok`. Do not treat that wait as a second failure.
 
 ### Critical journey again
 

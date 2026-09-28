@@ -120,24 +120,22 @@ The mail code is Nodemailer. It still reads `MAILTRAP_HOST`, `MAILTRAP_PORT`, `M
 npm run start:dev
 ```
 
-Starts the NestJS server in watch mode — it restarts automatically whenever you save a file. Should print something like `Ops Hub backend running on http://localhost:3000`.
+Starts the NestJS server in watch mode — it restarts automatically whenever you save a file. The log line is `Ops Hub backend listening on port 3000` (or whichever port was free).
 
 ### What URL do I open?
 
-`http://localhost:3000`. If port 3000 was busy, read the terminal for the address it actually used.
-
-There's no browsable UI at that URL by itself — either use Postman/Thunder Client directly against the backend, or run the frontend (`../frontend`, see its own README) and use that.
+While editing, the website is the Vite app at `http://localhost:5173`, and it calls the API at `http://localhost:3000`. After `npm run verify:release`, or any build that produces `frontend/dist`, the API process also serves that built website, so `http://localhost:3000` is the site and the API together. The live site works the same way: one address for both.
 
 ## Authentication
 
-Employee routes require a valid session JWT. `GET /health` does not: it uses HTTP Basic auth (`HEALTH_USER` and `HEALTH_PASSWORD`) and ignores the employee cookie. The browser does not keep the session token in JavaScript. Login sets an httpOnly cookie named `access_token` (`Secure`, `SameSite=None`). The page cannot read it. Later requests send it because the frontend calls the API with credentials included. `POST /auth/logout` clears the cookie. `GET /auth/me` is how the page learns who is signed in.
+Employee routes require a valid session JWT. `GET /health` does not: it uses HTTP Basic auth (`HEALTH_USER` and `HEALTH_PASSWORD`) and ignores the employee cookie. Every other route below is served under `/api` (for example `POST /api/auth/password`). The browser does not keep the session token in JavaScript. Login sets an httpOnly cookie named `access_token` (`Secure`, `SameSite=Lax`). Lax is enough because the website and the API are the same site. The page cannot read the cookie. Later requests send it because the frontend calls the API with credentials included. `POST /api/auth/logout` clears the cookie. `GET /api/auth/me` is how the page learns who is signed in.
 
 Postman and the automated tests can still send `Authorization: Bearer <token>` instead of the cookie. A request with neither is `401`.
 
 **Email and password:**
 
 ```
-POST /auth/password
+POST /api/auth/password
 { "email": "<the address on the user row>", "password": "<that user's password>" }
 ```
 
@@ -147,7 +145,7 @@ Sets the cookie and returns `{ "ok": true }`. The email is the address on the us
 
 **Real login, via Microsoft Entra ID** (only if configured, see above):
 
-`GET /auth/login` → redirects to Microsoft → after a real login, `GET /auth/callback` exchanges the result for this app's own JWT, sets the cookie, and redirects to the frontend.
+`GET /api/auth/login` → redirects to Microsoft → after a real login, `GET /api/auth/callback` exchanges the result for this app's own JWT, sets the cookie, and redirects to the frontend.
 
 ## Current stage and limitations
 
@@ -193,7 +191,7 @@ Admin only. Duplicate emails rejected. Last admin cannot be removed. `Other` is 
 
 ## Requests endpoints
 
-The actor for every request below is whoever the session cookie or `Authorization: Bearer <token>` header resolves to — there is no more `actorId` body or query param anywhere.
+The paths in the tables are the controller paths. The running app prefixes them with `/api`. `GET /health` is the exception. The actor for every request below is whoever the session cookie or `Authorization: Bearer <token>` header resolves to — there is no more `actorId` body or query param anywhere.
 
 | Method | Path                     | Body                                                         | Authorization rule                                                                                                                                                                                                             |
 | ------ | ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -256,15 +254,17 @@ All errors follow Nest's standard shape:
 
 ## Try it in Postman
 
-Sign in with `POST /auth/password` as a user who already exists in Neon. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. The long tests create their own users on the practice database and sign in the same way.
+Sign in with `POST /api/auth/password`. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. For the live site use `https://internal-operations-service-hub.onrender.com`. For a local API use `http://localhost:3000`.
 
-1. `POST /auth/password` with the user's email and password.
+The same steps by hand, with the `/api` prefix:
 
-2. `POST /requests`
+1. `POST /api/auth/password` with the user's email and password.
+
+2. `POST /api/requests`
 
    ```json
    {
-     "categoryId": "laptop-issue",
+     "categoryId": "<a category id from the database>",
      "subject": "Laptop won't turn on",
      "description": "Held power button 10s, no lights at all."
    }
@@ -272,13 +272,13 @@ Sign in with `POST /auth/password` as a user who already exists in Neon. The res
 
    Copy the returned `id`. `owningTeamId` is derived automatically from the category.
 
-3. Sign in again with `POST /auth/password` as someone on the owning team, so that person can act on the request above.
+3. Sign in again with `POST /api/auth/password` as someone on the owning team, so that person can act on the request above.
 
-4. `PATCH /requests/{id}/claim` while signed in as the team member (no body needed).
+4. `PATCH /api/requests/{id}/claim` while signed in as the team member (no body needed).
 
-5. `PATCH /requests/{id}/status` as that team member: `{ "status": "In Progress" }`.
+5. `PATCH /api/requests/{id}/status` as that team member: `{ "status": "In Progress" }`.
 
-6. Sign back in as the requester and `GET /requests/{id}/full` — full detail, since they're the requester.
+6. Sign back in as the requester and `GET /api/requests/{id}/full` — full detail, since they're the requester.
 
 7. Try step 4 again as the requester — expect `403`, since they're not on the owning team. This is the authorization boundary from the assignment, live.
 

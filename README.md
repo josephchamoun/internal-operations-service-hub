@@ -6,9 +6,18 @@ A single, trackable entry point for internal employee requests, starting with IT
 
 PostgreSQL on Neon. Sign-in with Microsoft or with email and password. Notifications go out through Gmail (SMTP). The intake suggestion uses Groq and is optional: without a key, the ordinary submit form still works. Files are stored in the database.
 
+Mail can be tested on your own computer. Run the API locally with `MAILTRAP_HOST=smtp.gmail.com`, port `587`, and the Gmail app password in `backend/.env`. Create an IT request. The message goes to the active members of that team, and a copy shows in the sending Gmail account's Sent folder. The request is still saved if the send fails. Render's free plan blocks outbound ports `25`, `465`, and `587`, so the same send times out on the live free service. A paid Render instance can use port `587` with those same Gmail settings.
+
 `GET /health` checks the database and Groq and is protected with its own username and password. `npm run monitor` is a separate process that calls health about every 2 seconds. The release check is `npm run verify:release`. Details are in `docs/week5-release-operations.md`.
 
-The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignments. They are left as they were. This file describes the app as it runs now.
+The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignments. They are left unchanged on purpose. This file describes the app as it runs now. Do not read those three write-ups as a description of the current routes or host.
+
+## Live site
+
+- Website and API: `https://internal-operations-service-hub.onrender.com`
+- Sign in: `https://internal-operations-service-hub.onrender.com/login`
+- Health: `https://internal-operations-service-hub.onrender.com/health` (Basic auth, not a page)
+- Microsoft sign-in: `https://internal-operations-service-hub.onrender.com/api/auth/login`
 
 ## What has been built
 
@@ -77,3 +86,5 @@ To run it on a new machine:
 ## Host
 
 The live API starts with `npm run start:prod` (`node dist/main`) and also serves the built website. The monitor is not started by that command. Run it separately, with `HEALTH_URL` set to `https://internal-operations-service-hub.onrender.com/health`.
+
+The live service is on Render's free plan. After about 15 minutes with no visits it sleeps. The first open after that, and the first open after Resume, can take a minute or more before the site answers. Wait for it. That wait is the free plan waking up, not a failed recovery.
