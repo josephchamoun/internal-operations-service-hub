@@ -6,7 +6,7 @@ A single, trackable entry point for internal employee requests, starting with IT
 
 PostgreSQL on Neon. Sign-in with Microsoft or with email and password. Notifications go out through Gmail (SMTP). The intake suggestion uses Groq and is optional: without a key, the ordinary submit form still works. Files are stored in the database.
 
-`GET /health` checks the database and Groq and is protected with its own username and password. `npm run monitor` is a separate process that calls health about every 2 seconds. The release check is `npm run verify:release`. GitHub runs that check on every push, then runs the long database tests on a temporary database. Details are in `docs/week5-release-operations.md`.
+`GET /health` checks the database and Groq and is protected with its own username and password. `npm run monitor` is a separate process that calls health about every 2 seconds. The release check is `npm run verify:release`. Details are in `docs/week5-release-operations.md`.
 
 The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignments. They are left as they were. This file describes the app as it runs now.
 
@@ -15,7 +15,7 @@ The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignmen
 1. **Product design** — `docs/product-spec.md`, `docs/architecture.md`, `docs/data-model.md`, and `docs/decisions/ADR-001.md`.
 2. **Week 2** — `docs/week2-agentic-workflow.md`.
 3. **Week 3** — `docs/week3-full-stack-delivery.md`.
-4. **Week 4 AI** — advisory Groq suggestion before submit (`POST /requests/interpret`). See `docs/week4-production-ai.md`.
+4. **Week 4 AI** — advisory Groq suggestion before submit (`POST /api/requests/interpret`). See `docs/week4-production-ai.md`.
 5. **Week 5** — release check, protected health, monitor, and written recovery. See `docs/week5-release-operations.md`.
 6. **On top of the request flow**
    - Admin can create, edit, and delete users, teams, categories, and priorities (with the locked `Other` / `Normal` rules).
@@ -45,12 +45,35 @@ Seed creates one admin, Jordan Admin, and only when that user is missing. It doe
 
 `npm run start:dev` is for editing: the API restarts when you save a file. After a release build, `npm --prefix backend run start:prod` runs the compiled API (`node dist/main`) and does not watch files.
 
+## Sign in
+
+The live site is `https://internal-operations-service-hub.onrender.com`. The same address serves the website and the API. Data routes are under `/api`. `GET /health` is not.
+
+Sign in with email and password. Seed creates one admin, Jordan Admin, only when that user is missing. The email and password are in `backend/prisma/seed.ts`. Microsoft sign-in is optional.
+
+## Operations
+
+The monitor is a second process. It is how you watch health over time. From the repo root, with `HEALTH_USER` and `HEALTH_PASSWORD` set:
+
+```bash
+HEALTH_URL=https://internal-operations-service-hub.onrender.com/health npm run monitor
+```
+
+It prints `ok` while the API is up. After three failures in a row it prints `ALERT`. When the API is back it prints `RESOLVED`. Stop it with Ctrl+C. The recovery steps are in `docs/week5-release-operations.md`.
+
 ## Tests
 
-On your computer, from the repo root, `npm run verify:release` builds both apps, typechecks the backend, and runs the unit tests and the AI evals. It does not run the long tests, because those wipe rows and this command uses the live Neon database.
+`npm run verify:release` from the repo root is the one check before a release. It creates tables, runs the seed, builds both apps, typechecks, and runs every test, including the long ones. It uses `TEST_DATABASE_URL` only. It does not read `DATABASE_URL`, so it does not touch Neon.
 
-GitHub runs `verify:release` and then `npm --prefix backend run test:db` on a temporary Postgres database. `test:db` is the integration spec plus the end-to-end tests.
+To run it on a new machine:
 
-## What's not on a host yet
+1. Install Node.js and npm.
+2. Install Docker Desktop and wait until it is running. An existing Postgres install can replace Docker. Point `TEST_DATABASE_URL` at a database you can wipe.
+3. From the repo root, install both apps: `cd backend && npm install`, then `cd ../frontend && npm install`.
+4. Copy `backend/.env.example` to `backend/.env`. Set `JWT_SECRET` to any long random string. The long tests boot the API, and the API refuses to start without it. `TEST_DATABASE_URL` is already filled in the example. Leave `DATABASE_URL` unused for this command. Notes in that file must start with `#`. Docker Compose reads `backend/.env` and rejects `//` comments.
+5. From the repo root, start the practice database: `docker compose -f backend/docker-compose.test.yml up -d`. The first run downloads Postgres 16. It creates database `ops_hub_test` on `localhost:5433` with user `postgres` and password `postgres`.
+6. From the repo root, run `npm run verify:release`.
 
-The release check, health, and the monitor command are in the repo. The API is not deployed to a hosting service, and nothing starts the monitor for you. When a host exists, the API starts with `start:prod`, and the monitor is a second program with `HEALTH_URL` set to that host's `/health`.
+## Host
+
+The live API starts with `npm run start:prod` (`node dist/main`) and also serves the built website. The monitor is not started by that command. Run it separately, with `HEALTH_URL` set to `https://internal-operations-service-hub.onrender.com/health`.

@@ -250,13 +250,13 @@ All errors follow Nest's standard shape:
 
 ## Reference data
 
-`prisma db seed` creates Jordan Admin only, and only when that user is missing. Teams, categories, priorities, and everyone else are rows an admin maintains in the app. The long tests build their own teams, categories, and users on GitHub's temporary database, including `dev-employee` and `dev-manager`. Those two are not created by the seed.
+`prisma db seed` creates Jordan Admin only, and only when that user is missing. Teams, categories, priorities, and everyone else are rows an admin maintains in the app. The long tests build their own teams, categories, and users on the practice database, including `dev-employee` and `dev-manager`. Those two are not created by the seed.
 
 `GET /teams`, `/categories`, and `/priorities` read whatever rows are in the database. `GET /users` is admin-only.
 
 ## Try it in Postman
 
-Sign in with `POST /auth/password` as a user who already exists in Neon. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. The long tests on GitHub create their own users and sign in the same way.
+Sign in with `POST /auth/password` as a user who already exists in Neon. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. The long tests create their own users on the practice database and sign in the same way.
 
 1. `POST /auth/password` with the user's email and password.
 
@@ -290,11 +290,11 @@ npm run test:ai-eval  # intake suggestion cases, with the model mocked
 npm run test:db       # integration spec, then end-to-end tests. Needs TEST_DATABASE_URL.
 ```
 
-`npm test` does not open a database. `test:db` writes and wipes rows, so it belongs on the temporary Postgres database GitHub starts, not on Neon. From the repo root, `npm run verify:release` runs the build, the typecheck, `npm test`, and the AI evals. GitHub then runs `test:db`. The end-to-end files are `test/requests.e2e-spec.ts`, `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`, `test/admin.e2e-spec.ts`, and `test/rate-limit.e2e-spec.ts`.
+`npm test` does not open a database. `npm run verify:release` from the repo root runs setup, both builds, the typecheck, the unit tests, the AI evals, and `test:db`. It uses `TEST_DATABASE_URL` only. Before that command: install dependencies here and in `frontend`, copy `.env.example` to `.env`, set `JWT_SECRET`, start Docker Desktop, then run `docker compose -f docker-compose.test.yml up -d` from this folder. That container is Postgres 16, database `ops_hub_test`, on `localhost:5433`. The full list is in the root `README.md`. The end-to-end files are `test/requests.e2e-spec.ts`, `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`, `test/admin.e2e-spec.ts`, and `test/rate-limit.e2e-spec.ts`. HTTP routes in those tests are under `/api`, except `GET /health`.
 
 ## Why PostgreSQL
 
-The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. Neon holds the real data. GitHub's long tests use a Postgres 16 database that exists only for that run.
+The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. Neon holds the real data. `npm run verify:release` uses the Docker practice database from `docker-compose.test.yml`, through `TEST_DATABASE_URL`.
 
 ## File structure
 

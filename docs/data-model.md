@@ -230,7 +230,7 @@ No index was added on category alone, since the Admin's cross-team filter is inf
 
 ### Database type
 
-The hub's system of record is PostgreSQL (Neon in a real run, and a temporary PostgreSQL database on GitHub for the long tests). It is a relational database. A short explanation: the data here is a tightly connected network, requests joined against teams, categories, and timelines, with rules like "at most one claimant" that must always hold, which a relational database enforces directly. The full reasoning, the options considered, and what this choice commits the system to are recorded in ADR-001, in the decisions folder.
+The hub's system of record is PostgreSQL (Neon in a real run, and a practice Postgres for `npm run verify:release`). It is a relational database. A short explanation: the data here is a tightly connected network, requests joined against teams, categories, and timelines, with rules like "at most one claimant" that must always hold, which a relational database enforces directly. The full reasoning, the options considered, and what this choice commits the system to are recorded in ADR-001, in the decisions folder.
 
 ### What is durable versus derived
 
