@@ -22,9 +22,10 @@ export class NotificationsService {
       host: this.configService.get<string>('MAILTRAP_HOST'),
       port: Number(this.configService.get<string>('MAILTRAP_PORT')),
       secure: false,
+      family: 4,
       auth: {
         user: this.configService.get<string>('MAILTRAP_USER'),
-        pass: this.configService.get<string>('MAILTRAP_PASS'),
+        pass: (this.configService.get<string>('MAILTRAP_PASS') ?? '').replace(/\s+/g, ''),
       },
       tls: {
         // Some local/corporate networks have TLS-inspecting proxies or
