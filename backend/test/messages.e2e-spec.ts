@@ -38,7 +38,7 @@ describe('Messages and attachments (e2e)', () => {
     adminToken = await login(app, 'admin-1');
 
     const created = await request(app.getHttpServer())
-      .post('/requests')
+      .post('/api/requests')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         categoryId: 'laptop-issue',
@@ -55,7 +55,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('lets the requester send a text message', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .field('body', 'Here is more context')
       .expect(201);
@@ -65,7 +65,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('lets any owning-team member send a file-only message', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${managerToken}`)
       .attach('files', Buffer.from('hello'), {
         filename: 'note.txt',
@@ -78,7 +78,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('drops a file-only message when its last attachment is deleted', async () => {
     const created = await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .attach('files', Buffer.from('only-file'), {
         filename: 'solo.txt',
@@ -89,12 +89,12 @@ describe('Messages and attachments (e2e)', () => {
     const attachmentId = created.body.attachments[0].id as string;
 
     await request(app.getHttpServer())
-      .delete(`/requests/${requestId}/attachments/${attachmentId}`)
+      .delete(`/api/requests/${requestId}/attachments/${attachmentId}`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
 
     const list = await request(app.getHttpServer())
-      .get(`/requests/${requestId}/messages`)
+      .get(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
     expect(list.body.some((item: { id: string }) => item.id === messageId)).toBe(
@@ -104,7 +104,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('rejects an admin who is not the requester or on the team', async () => {
     await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${adminToken}`)
       .field('body', 'Admin should not post')
       .expect(403);
@@ -112,7 +112,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('rejects an empty post', async () => {
     await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .field('body', '   ')
       .expect(400);
@@ -120,7 +120,7 @@ describe('Messages and attachments (e2e)', () => {
 
   it('rejects a bad attachment without saving an empty message', async () => {
     await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .field('body', 'should not be saved')
       .attach('files', Buffer.from('MZ'), {
@@ -130,7 +130,7 @@ describe('Messages and attachments (e2e)', () => {
       .expect(400);
 
     const list = await request(app.getHttpServer())
-      .get(`/requests/${requestId}/messages`)
+      .get(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
     expect(list.body.some((item: { body: string }) => item.body === 'should not be saved')).toBe(
@@ -140,11 +140,11 @@ describe('Messages and attachments (e2e)', () => {
 
   it('blocks messages after the request is cancelled', async () => {
     await request(app.getHttpServer())
-      .patch(`/requests/${requestId}/cancel`)
+      .patch(`/api/requests/${requestId}/cancel`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
     await request(app.getHttpServer())
-      .post(`/requests/${requestId}/messages`)
+      .post(`/api/requests/${requestId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .field('body', 'too late')
       .expect(400);

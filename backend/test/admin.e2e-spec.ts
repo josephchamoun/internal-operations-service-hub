@@ -42,7 +42,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
 
   it('rejects non-admin writes', async () => {
     await request(app.getHttpServer())
-      .post('/teams')
+      .post('/api/teams')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({ name: "Legal" })
       .expect(403);
@@ -50,7 +50,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
 
   it("creates and deletes an unused team", async () => {
     const created = await request(app.getHttpServer())
-      .post("/teams")
+      .post("/api/teams")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ name: "Legal" })
       .expect(201);
@@ -58,31 +58,31 @@ describe('Admin reference-data CRUD (e2e)', () => {
     expect(created.body.name).toBe("Legal");
 
     await request(app.getHttpServer())
-      .delete(`/teams/${created.body.id}`)
+      .delete(`/api/teams/${created.body.id}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
   });
 
   it("forbids editing or deleting Other, and deleting Normal", async () => {
     await request(app.getHttpServer())
-      .patch("/categories/other")
+      .patch("/api/categories/other")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ name: "Something else" })
       .expect(409);
     await request(app.getHttpServer())
-      .delete('/categories/other')
+      .delete('/api/categories/other')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(409);
 
     await request(app.getHttpServer())
-      .delete('/priorities/Normal')
+      .delete('/api/priorities/Normal')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(409);
   });
 
   it('rejects a duplicate email', async () => {
     await request(app.getHttpServer())
-      .post('/users')
+      .post('/api/users')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: "Dup",
@@ -93,7 +93,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
 
   it('lets an employee claim after being added to the owning team without logging in again', async () => {
     const created = await request(app.getHttpServer())
-      .post('/requests')
+      .post('/api/requests')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         categoryId: 'laptop-issue',
@@ -103,12 +103,12 @@ describe('Admin reference-data CRUD (e2e)', () => {
       .expect(201);
 
     await request(app.getHttpServer())
-      .patch(`/requests/${created.body.id}/claim`)
+      .patch(`/api/requests/${created.body.id}/claim`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
 
     const updated = await request(app.getHttpServer())
-      .patch('/users/dev-employee')
+      .patch('/api/users/dev-employee')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ teamIds: ['IT'] })
       .expect(200);
@@ -116,7 +116,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
     expect(updated.body.teamIds).toEqual(['IT']);
 
     const me = await request(app.getHttpServer())
-      .get('/auth/me')
+      .get('/api/auth/me')
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
     expect(me.body.role).toBe('team_member');
@@ -124,7 +124,7 @@ describe('Admin reference-data CRUD (e2e)', () => {
     expect(me.body.name).toBeTruthy();
 
     const claimed = await request(app.getHttpServer())
-      .patch(`/requests/${created.body.id}/claim`)
+      .patch(`/api/requests/${created.body.id}/claim`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
     expect(claimed.body.claimedBy).toBe('dev-employee');

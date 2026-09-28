@@ -60,7 +60,7 @@ describe('Silence and escalation (e2e)', () => {
     adminToken = await login(app, 'admin-1');
 
     const created = await request(app.getHttpServer())
-      .post('/requests')
+      .post('/api/requests')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         categoryId: 'laptop-issue',
@@ -77,25 +77,25 @@ describe('Silence and escalation (e2e)', () => {
 
   it('lets an owning-team member silence and un-silence themselves', async () => {
     await request(app.getHttpServer())
-      .get(`/requests/${requestId}/silence`)
+      .get(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200)
       .expect({ silenced: false });
 
     await request(app.getHttpServer())
-      .put(`/requests/${requestId}/silence`)
+      .put(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200)
       .expect({ silenced: true });
 
     await request(app.getHttpServer())
-      .get(`/requests/${requestId}/silence`)
+      .get(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200)
       .expect({ silenced: true });
 
     await request(app.getHttpServer())
-      .delete(`/requests/${requestId}/silence`)
+      .delete(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200)
       .expect({ silenced: false });
@@ -103,18 +103,18 @@ describe('Silence and escalation (e2e)', () => {
 
   it('rejects silence from the requester and from an admin who is not on the team', async () => {
     await request(app.getHttpServer())
-      .put(`/requests/${requestId}/silence`)
+      .put(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
     await request(app.getHttpServer())
-      .put(`/requests/${requestId}/silence`)
+      .put(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(403);
   });
 
   it('skips silenced members when a reminder fires', async () => {
     await request(app.getHttpServer())
-      .put(`/requests/${requestId}/silence`)
+      .put(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200);
 
@@ -140,15 +140,15 @@ describe('Silence and escalation (e2e)', () => {
 
   it('clears that member silence when they claim the request', async () => {
     await request(app.getHttpServer())
-      .put(`/requests/${requestId}/silence`)
+      .put(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200);
     await request(app.getHttpServer())
-      .patch(`/requests/${requestId}/claim`)
+      .patch(`/api/requests/${requestId}/claim`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200);
     await request(app.getHttpServer())
-      .get(`/requests/${requestId}/silence`)
+      .get(`/api/requests/${requestId}/silence`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200)
       .expect({ silenced: false });

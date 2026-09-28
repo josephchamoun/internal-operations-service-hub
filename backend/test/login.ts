@@ -18,7 +18,7 @@ export async function login(
     throw new Error(`No test email for ${userId}`);
   }
   const res = await request(app.getHttpServer())
-    .post('/auth/password')
+    .post('/api/auth/password')
     .send({ email, password: TEST_PASSWORD })
     .expect(200);
 

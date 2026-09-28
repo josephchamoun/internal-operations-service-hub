@@ -2,36 +2,18 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
 config();
 
-const API_PREFIXES = [
-  '/auth',
-  '/requests',
-  '/access-logs',
-  '/request-events',
-  '/health',
-  '/categories',
-  '/priorities',
-  '/analytics',
-  '/people',
-  '/team-memberships',
-  '/teams',
-  '/users',
-];
-
-function isApiPath(path: string): boolean {
-  return API_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-  );
-}
-
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'health', method: RequestMethod.ALL }],
+  });
 
   // Strips unknown fields and validates every incoming DTO automatically.
   app.useGlobalPipes(
@@ -55,8 +37,8 @@ async function bootstrap() {
   if (existsSync(join(frontendDist, 'index.html'))) {
     app.useStaticAssets(frontendDist, { index: false });
     app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path === '/health' || req.path.startsWith('/api/')) return next();
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-      if (isApiPath(req.path)) return next();
       res.sendFile(join(frontendDist, 'index.html'));
     });
   }

@@ -46,7 +46,7 @@ describe('Write rate limits (e2e)', () => {
 
   function createRequest(token: string, subject: string) {
     return request(app.getHttpServer())
-      .post('/requests')
+      .post('/api/requests')
       .set('Authorization', `Bearer ${token}`)
       .send({
         categoryId: 'laptop-issue',
@@ -71,14 +71,14 @@ describe('Write rate limits (e2e)', () => {
   it('allows five messages per person per minute and refuses the sixth', async () => {
     for (let i = 1; i <= 5; i++) {
       await request(app.getHttpServer())
-        .post(`/requests/${threadId}/messages`)
+        .post(`/api/requests/${threadId}/messages`)
         .set('Authorization', `Bearer ${employeeToken}`)
         .field('body', `note ${i}`)
         .expect(201);
     }
 
     const blocked = await request(app.getHttpServer())
-      .post(`/requests/${threadId}/messages`)
+      .post(`/api/requests/${threadId}/messages`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .field('body', 'note 6')
       .expect(429);
@@ -87,7 +87,7 @@ describe('Write rate limits (e2e)', () => {
     );
 
     await request(app.getHttpServer())
-      .post(`/requests/${threadId}/messages`)
+      .post(`/api/requests/${threadId}/messages`)
       .set('Authorization', `Bearer ${managerToken}`)
       .field('body', 'team reply')
       .expect(201);

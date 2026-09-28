@@ -1,8 +1,13 @@
 // Dev talks to the API on another port. A production build uses this same
-// site, so requests stay relative and the session cookie is first-party.
+// site. Data calls use /api so a page address like /analytics stays a page.
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
   (import.meta.env.DEV ? "http://localhost:3000" : "");
+
+function apiPath(path: string): string {
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}/api${suffix}`;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -22,7 +27,7 @@ export async function api<T>(
   }
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiPath(path), {
       ...init,
       headers,
       credentials: "include",
@@ -52,7 +57,7 @@ export async function downloadFile(
   path: string,
   fileName?: string,
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include" });
+  const response = await fetch(apiPath(path), { credentials: "include" });
   if (!response.ok) {
     throw new ApiError(response.status, "Could not download the file");
   }
@@ -64,4 +69,4 @@ export async function downloadFile(
   link.click();
   URL.revokeObjectURL(url);
 }
-export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
+export const apiUrl = (path: string) => apiPath(path);

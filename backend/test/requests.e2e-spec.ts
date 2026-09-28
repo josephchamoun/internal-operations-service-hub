@@ -59,7 +59,7 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('creates a request as the employee', async () => {
     const res = await request(app.getHttpServer())
-      .post('/requests')
+      .post('/api/requests')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         categoryId: 'laptop-issue',
@@ -75,7 +75,7 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('allows the requester to edit a New unclaimed request', async () => {
     const res = await request(app.getHttpServer())
-      .patch(`/requests/${createdRequestId}/details`)
+      .patch(`/api/requests/${createdRequestId}/details`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         subject: 'E2E test request (edited)',
@@ -89,7 +89,7 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('denies an edit from an actor who is not the requester', async () => {
     await request(app.getHttpServer())
-      .patch(`/requests/${createdRequestId}/details`)
+      .patch(`/api/requests/${createdRequestId}/details`)
       .set('Authorization', `Bearer ${managerToken}`)
       .send({
         subject: 'Should not apply',
@@ -100,14 +100,14 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('denies claim from an actor not on the owning team', async () => {
     await request(app.getHttpServer())
-      .patch(`/requests/${createdRequestId}/claim`)
+      .patch(`/api/requests/${createdRequestId}/claim`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
   });
 
   it('allows claim from an actor on the owning team', async () => {
     const res = await request(app.getHttpServer())
-      .patch(`/requests/${createdRequestId}/claim`)
+      .patch(`/api/requests/${createdRequestId}/claim`)
       .set('Authorization', `Bearer ${managerToken}`)
       .expect(200);
 
@@ -116,7 +116,7 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('rejects an edit after the request has been claimed', async () => {
     await request(app.getHttpServer())
-      .patch(`/requests/${createdRequestId}/details`)
+      .patch(`/api/requests/${createdRequestId}/details`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         subject: 'Too late',
@@ -126,12 +126,12 @@ describe('Requests lifecycle (e2e)', () => {
   });
 
   it('rejects requests with no auth token at all', async () => {
-    await request(app.getHttpServer()).get('/requests').expect(401);
+    await request(app.getHttpServer()).get('/api/requests').expect(401);
   });
 
   it('returns a structured intake suggestion without creating a request', async () => {
     const res = await request(app.getHttpServer())
-      .post('/requests/interpret')
+      .post('/api/requests/interpret')
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({ draft: 'my laptop is shut down and wont open' })
       .expect(200);
@@ -145,7 +145,7 @@ describe('Requests lifecycle (e2e)', () => {
 
   it('rejects interpret without auth', async () => {
     await request(app.getHttpServer())
-      .post('/requests/interpret')
+      .post('/api/requests/interpret')
       .send({ draft: 'my laptop is shut down and wont open' })
       .expect(401);
   });

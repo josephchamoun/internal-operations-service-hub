@@ -97,7 +97,7 @@ export function LoginPage() {
           <span>or</span>
         </div>
 
-        <a className="btn microsoft" href={`${API_BASE_URL}/auth/login`}>
+        <a className="btn microsoft" href={`${API_BASE_URL}/api/auth/login`}>
           Sign in with Microsoft
         </a>
       </Card>
