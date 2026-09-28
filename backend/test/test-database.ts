@@ -8,14 +8,14 @@ export const TEST_PASSWORD = 'TestLogin2026';
 config();
 
 /**
- * Points this process at the disposable database from GitHub Actions.
+ * Points this process at the practice database.
  * The production database stays in DATABASE_URL. These tests wipe every row.
  */
 export function useTestDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL?.trim();
   if (!url) {
     throw new Error(
-      'TEST_DATABASE_URL is missing. Database tests run in GitHub Actions and must not use DATABASE_URL.',
+      'TEST_DATABASE_URL is missing. These tests wipe every row and must not use DATABASE_URL.',
     );
   }
   process.env.DATABASE_URL = url;
@@ -23,7 +23,7 @@ export function useTestDatabaseUrl(): string {
 }
 
 /**
- * Returns a PrismaClient pointed at the GitHub Actions database.
+ * Returns a PrismaClient pointed at the practice database.
  * Applies the current schema to it via `prisma db push` before returning.
  */
 export function createTestDatabase(): PrismaClient {

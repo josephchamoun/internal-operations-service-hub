@@ -2,7 +2,7 @@
   "name": "internal-operations-service-hub",
   "private": true,
   "scripts": {
-    "verify:release": "npm --prefix backend run db:setup && npm --prefix backend run build && npm --prefix frontend run build && npm --prefix backend run typecheck && npm --prefix backend test && npm --prefix backend run test:ai-eval",
+    "verify:release": "node backend/scripts/verify-release.js",
     "monitor": "npm --prefix backend run monitor",
     "monitor:local": "npm --prefix backend run monitor"
   }
