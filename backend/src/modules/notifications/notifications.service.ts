@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolve4 } from 'dns/promises';
 import * as nodemailer from 'nodemailer';
 import { UsersService } from '../users/users.service';
 import { TeamMembershipsService } from '../team-memberships/team-memberships.service';
@@ -7,7 +8,7 @@ import { TeamMembershipsService } from '../team-memberships/team-memberships.ser
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | undefined;
   private readonly fromEmail: string;
 
   constructor(
@@ -17,19 +18,32 @@ export class NotificationsService {
   ) {
     this.fromEmail =
       this.configService.get<string>('NOTIFICATIONS_FROM_EMAIL') ?? 'noreply@ops-hub.local';
+  }
 
+  /**
+   * Nodemailer picks a Gmail address at random, and that pick is often IPv6.
+   * Render cannot open those addresses (ENETUNREACH). Connect to an IPv4
+   * address and keep the hostname for the TLS name check.
+   */
+  private async getTransporter(): Promise<nodemailer.Transporter> {
+    if (this.transporter) return this.transporter;
+    const hostname = this.configService.get<string>('MAILTRAP_HOST') ?? '';
+    const addresses = await resolve4(hostname);
+    const ipv4 = addresses[0];
+    if (!ipv4) {
+      throw new Error(`No IPv4 address for ${hostname}`);
+    }
     const transport = {
-      host: this.configService.get<string>('MAILTRAP_HOST'),
+      host: ipv4,
       port: Number(this.configService.get<string>('MAILTRAP_PORT')),
       secure: false,
-      // Render cannot open Gmail's IPv6 address. Nodemailer uses this at
-      // runtime; its published types leave it out.
-      family: 4 as const,
+      servername: hostname,
       auth: {
         user: this.configService.get<string>('MAILTRAP_USER'),
         pass: (this.configService.get<string>('MAILTRAP_PASS') ?? '').replace(/\s+/g, ''),
       },
       tls: {
+        servername: hostname,
         // Some local/corporate networks have TLS-inspecting proxies or
         // outdated root cert stores that break verification against
         // Mailtrap's sandbox cert chain. Safe to relax here since this only
@@ -38,7 +52,9 @@ export class NotificationsService {
         rejectUnauthorized: false,
       },
     };
+    this.logger.log(`Mail host ${hostname} will be reached at IPv4 ${ipv4}`);
     this.transporter = nodemailer.createTransport(transport);
+    return this.transporter;
   }
 
   /**
@@ -51,7 +67,8 @@ export class NotificationsService {
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await this.transporter.sendMail({
+        const transporter = await this.getTransporter();
+        await transporter.sendMail({
           from: this.fromEmail,
           to,
           subject,
