@@ -18,11 +18,13 @@ export class NotificationsService {
     this.fromEmail =
       this.configService.get<string>('NOTIFICATIONS_FROM_EMAIL') ?? 'noreply@ops-hub.local';
 
-    this.transporter = nodemailer.createTransport({
+    const transport = {
       host: this.configService.get<string>('MAILTRAP_HOST'),
       port: Number(this.configService.get<string>('MAILTRAP_PORT')),
       secure: false,
-      family: 4,
+      // Render cannot open Gmail's IPv6 address. Nodemailer uses this at
+      // runtime; its published types leave it out.
+      family: 4 as const,
       auth: {
         user: this.configService.get<string>('MAILTRAP_USER'),
         pass: (this.configService.get<string>('MAILTRAP_PASS') ?? '').replace(/\s+/g, ''),
@@ -35,7 +37,8 @@ export class NotificationsService {
         // production SMTP provider.
         rejectUnauthorized: false,
       },
-    });
+    };
+    this.transporter = nodemailer.createTransport(transport);
   }
 
   /**
