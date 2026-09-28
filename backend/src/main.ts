@@ -2,7 +2,8 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
+import { useApiPrefix } from './api-prefix';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
@@ -11,9 +12,7 @@ config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.setGlobalPrefix('api', {
-    exclude: [{ path: 'health', method: RequestMethod.ALL }],
-  });
+  useApiPrefix(app);
 
   // Strips unknown fields and validates every incoming DTO automatically.
   app.useGlobalPipes(

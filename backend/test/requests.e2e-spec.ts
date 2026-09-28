@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { useApiPrefix } from '../src/api-prefix';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
 import { login } from './login';
@@ -46,6 +47,7 @@ describe('Requests lifecycle (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    useApiPrefix(app);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 

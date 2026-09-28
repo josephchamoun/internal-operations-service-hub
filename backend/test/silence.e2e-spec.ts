@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { useApiPrefix } from '../src/api-prefix';
 import { EscalationsService } from '../src/modules/escalations/escalations.service';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { LLM_CLIENT } from '../src/modules/intake-ai/intake-ai.types';
@@ -51,6 +52,7 @@ describe('Silence and escalation (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    useApiPrefix(app);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     escalations = app.get(EscalationsService);
