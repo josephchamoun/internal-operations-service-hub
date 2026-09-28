@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "prisma", "data", "tmp-check-seed.js"]
+  "compilerOptions": {
+    "rootDir": "./src"
+  },
+  "exclude": ["node_modules", "dist", "prisma", "data", "test", "**/*spec.ts", "tmp-check-seed.js"]
 }
