@@ -1,0 +1,577 @@
+{
+  "info": {
+    "_postman_id": "a808c135-d173-478b-8dbc-aa96a1bc11b1",
+    "name": "Eurisko2026-InternalOperationsServiceHub",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "39615558"
+  },
+  "item": [
+    {
+      "name": "login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "\r\n  {\"email\":\"admin-1@chamounjoseph2022outlook.onmicrosoft.com\",\"password\":\"OpsHub2026\"}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/auth/password",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "password"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get My Requests",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/mine",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "mine"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create a request",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\r\n  \"categoryId\": \"other\",\r\n  \"teamId\": \"IT\",\r\n  \"subject\": \"request2\",\r\n  \"description\": \"Question about my benefits enrollment.\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Claim request",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/6a4cb875-415c-4d1e-8b05-9b8a94f15fb5/claim",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "6a4cb875-415c-4d1e-8b05-9b8a94f15fb5",
+            "claim"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Unclaim Request",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/2c19ddc5-d89d-483e-817e-fe9ae6d823c9/unclaim",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "2c19ddc5-d89d-483e-817e-fe9ae6d823c9",
+            "unclaim"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Status Change",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"status\": \"In Progress\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/6a4cb875-415c-4d1e-8b05-9b8a94f15fb5/status",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "6a4cb875-415c-4d1e-8b05-9b8a94f15fb5",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Request",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/6a4cb875-415c-4d1e-8b05-9b8a94f15fb5/cancel",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "6a4cb875-415c-4d1e-8b05-9b8a94f15fb5",
+            "cancel"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Access Logs for admins to view",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/access-logs",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "access-logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getting a request event",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/b3bc167d-f3d5-479b-b747-59ac7b7f8c81/events",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "b3bc167d-f3d5-479b-b747-59ac7b7f8c81",
+            "events"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reassignment",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\r\n  \"newTeamId\": \"IT\",\r\n  \"categoryId\": \"other\"\r\n\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/649e5a0d-dda8-4495-8c26-d6528aae3fc5/reassign",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "649e5a0d-dda8-4495-8c26-d6528aae3fc5",
+            "reassign"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get limited details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/649e5a0d-dda8-4495-8c26-d6528aae3fc5",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "649e5a0d-dda8-4495-8c26-d6528aae3fc5"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET FULL DETAILS",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/02562336-3fb4-4e43-af90-e00768f4a76e/full",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "02562336-3fb4-4e43-af90-e00768f4a76e",
+            "full"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET REQUESTS",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Request Priority Change",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"priorityId\": \"Urgent\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/f191f562-e1a4-4f3e-8d1f-0aea212827d3/priority",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "f191f562-e1a4-4f3e-8d1f-0aea212827d3",
+            "priority"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Categories",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/categories",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "categories"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Teams",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/teams",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "teams"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Priorities",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/priorities",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "priorities"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Users",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/users",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "edit request",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"subject\":\"ijewnfiujfmi\",\r\n    \"description\": \"kjlwknefkj4rl\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/requests/17f228aa-06dc-4c4c-975d-adc0b7180131/details",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "requests",
+            "17f228aa-06dc-4c4c-975d-adc0b7180131",
+            "details"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "replacethis",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "replacethispass",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/health",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "who is signed in",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://internal-operations-service-hub.onrender.com/api/auth/me",
+          "protocol": "https",
+          "host": [
+            "internal-operations-service-hub",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
