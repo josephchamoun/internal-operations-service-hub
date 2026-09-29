@@ -216,6 +216,8 @@ export function FullRequestPage() {
     request.status === "New" &&
     !request.claimedBy &&
     !isLimited;
+  const changingStatus =
+    action.isPending && action.variables?.path === `/requests/${id}/status`;
   return (
     <div className="full-request">
       <div className="page-heading detail-title">
@@ -402,6 +404,7 @@ export function FullRequestPage() {
                       ))}
                     </select>
                     <Button
+                      disabled={changingStatus}
                       onClick={() =>
                         action.mutate({
                           path: `/requests/${id}/status`,
@@ -409,7 +412,7 @@ export function FullRequestPage() {
                         })
                       }
                     >
-                      Change status
+                      {changingStatus ? "Changing…" : "Change status"}
                     </Button>
                   </div>
                 )}
