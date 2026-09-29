@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "../api/client";
@@ -87,6 +87,7 @@ export function FullRequestPage() {
     stream.onmessage = refresh;
     return () => stream.close();
   }, [id, userId]);
+  const actionBusy = useRef(false);
   const action = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: object }) =>
       api<RequestItem>(path, {
@@ -109,6 +110,18 @@ export function FullRequestPage() {
       }
     },
   });
+  function runAction(path: string, body?: object) {
+    if (actionBusy.current) return;
+    actionBusy.current = true;
+    action.mutate(
+      { path, ...(body ? { body } : {}) },
+      {
+        onSettled: () => {
+          actionBusy.current = false;
+        },
+      },
+    );
+  }
   if (preview.isPending || teams.isPending || categories.isPending)
     return <Loading />;
   if (preview.isError)
@@ -218,6 +231,8 @@ export function FullRequestPage() {
     !isLimited;
   const changingStatus =
     action.isPending && action.variables?.path === `/requests/${id}/status`;
+  const claiming =
+    action.isPending && action.variables?.path === `/requests/${id}/claim`;
   return (
     <div className="full-request">
       <div className="page-heading detail-title">
@@ -373,11 +388,10 @@ export function FullRequestPage() {
               <div className="actions">
                 {isTeamMember && !request.claimedBy && (
                   <Button
-                    onClick={() =>
-                      action.mutate({ path: `/requests/${id}/claim` })
-                    }
+                    disabled={claiming}
+                    onClick={() => runAction(`/requests/${id}/claim`)}
                   >
-                    Claim request
+                    {claiming ? "Claiming…" : "Claim request"}
                   </Button>
                 )}
                 <SilenceToggle requestId={id} enabled={canSilence} />
@@ -404,13 +418,11 @@ export function FullRequestPage() {
                       ))}
                     </select>
                     <Button
-                      disabled={changingStatus}
-                      onClick={() =>
-                        action.mutate({
-                          path: `/requests/${id}/status`,
-                          body: { status },
-                        })
-                      }
+                      disabled={changingStatus || status === request.status}
+                      onClick={() => {
+                        if (status === request.status) return;
+                        runAction(`/requests/${id}/status`, { status });
+                      }}
                     >
                       {changingStatus ? "Changing…" : "Change status"}
                     </Button>

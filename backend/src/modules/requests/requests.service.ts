@@ -246,6 +246,10 @@ export class RequestsService {
       throw new ForbiddenException('Only the current claimant can change this request\'s status');
     }
 
+    if (dto.status === request.status) {
+      throw new BadRequestException(`Status is already ${request.status}`);
+    }
+
     if (
       dto.status === RequestStatus.RESOLVED &&
       request.requesterId === actor.userId &&

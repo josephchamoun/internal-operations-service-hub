@@ -339,4 +339,25 @@ describe('RequestsService — list summaries and resolve rule', () => {
     ).rejects.toThrow(ForbiddenException);
     expect(mockRepo.update).not.toHaveBeenCalled();
   });
+
+  it('rejects a status change that leaves the status the same', async () => {
+    mockRepo.findById.mockResolvedValue({
+      id: 'req1',
+      requesterId: 'dev-employee',
+      owningTeamId: 'IT',
+      claimedBy: 'agent',
+      status: RequestStatus.IN_PROGRESS,
+      subject: 'Laptop',
+    });
+    const agent = { userId: 'agent', role: 'team_member', teamIds: ['IT'] };
+    await expect(
+      service.updateStatus(
+        'req1',
+        { status: RequestStatus.IN_PROGRESS },
+        agent as any,
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
+    expect(mockRequestEventsService.append).not.toHaveBeenCalled();
+  });
 });
