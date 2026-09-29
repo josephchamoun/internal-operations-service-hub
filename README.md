@@ -19,6 +19,18 @@ The Week 2, Week 3, and Week 4 write-ups are the submissions for those assignmen
 - Health: `https://internal-operations-service-hub.onrender.com/health` (Basic auth, not a page)
 - Microsoft sign-in: `https://internal-operations-service-hub.onrender.com/api/auth/login`
 
+## Postman
+
+The collection is `postman/Eurisko2026-InternalOperationsServiceHub.postman_collection.json`.
+
+Download it from this link:
+
+`https://raw.githubusercontent.com/josephchamoun/internal-operations-service-hub/main/postman/Eurisko2026-InternalOperationsServiceHub.postman_collection.json`
+
+In Postman, choose **Import**, then **Link**, and paste that address. The same file can be saved from the browser and imported with **File**.
+
+Login is the first request. Send it before the others so Postman keeps the `access_token` cookie. The health request uses Basic auth. Replace `replacethis` and `replacethispass` with `HEALTH_USER` and `HEALTH_PASSWORD` from the environment. Those two values are not in the file.
+
 ## What has been built
 
 1. **Product design** — `docs/product-spec.md`, `docs/architecture.md`, `docs/data-model.md`, and `docs/decisions/ADR-001.md`.

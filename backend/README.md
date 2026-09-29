@@ -254,7 +254,17 @@ All errors follow Nest's standard shape:
 
 ## Try it in Postman
 
-Sign in with `POST /api/auth/password`. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the requests below. For the live site use `https://internal-operations-service-hub.onrender.com`. For a local API use `http://localhost:3000`.
+The ready collection is `postman/Eurisko2026-InternalOperationsServiceHub.postman_collection.json` in the repo root.
+
+Download it here:
+
+`https://raw.githubusercontent.com/josephchamoun/internal-operations-service-hub/main/postman/Eurisko2026-InternalOperationsServiceHub.postman_collection.json`
+
+In Postman, choose **Import**, then **Link**, and paste that address. Saving the file from the browser and choosing **Import → File** loads the same collection.
+
+Login is the first request. Send it first. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the later requests. The requests call `https://internal-operations-service-hub.onrender.com`. For a local API, change the host to `http://localhost:3000`.
+
+The health request is Basic auth. The file has `replacethis` and `replacethispass`. Replace those with `HEALTH_USER` and `HEALTH_PASSWORD` from the environment before sending it.
 
 The same steps by hand, with the `/api` prefix:
 
