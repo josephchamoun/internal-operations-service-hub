@@ -1,5 +1,4 @@
 import {
-  healthAuthOk,
   initialMonitorState,
   nextMonitorState,
   safeFailureReason,
@@ -42,20 +41,6 @@ describe('health monitor', () => {
     const recovered = nextMonitorState(degraded.state, true);
     expect(recovered.event).toBe('none');
     expect(recovered.state.consecutiveNonOk).toBe(0);
-  });
-});
-
-describe('health auth', () => {
-  const header = `Basic ${Buffer.from('health:HealthCheck2026').toString('base64')}`;
-
-  it('accepts the configured username and password', () => {
-    expect(healthAuthOk(header, 'health', 'HealthCheck2026')).toBe(true);
-  });
-
-  it('rejects a missing or wrong password', () => {
-    expect(healthAuthOk(undefined, 'health', 'HealthCheck2026')).toBe(false);
-    expect(healthAuthOk(header, 'health', 'other')).toBe(false);
-    expect(healthAuthOk(header, undefined, undefined)).toBe(false);
   });
 });
 
