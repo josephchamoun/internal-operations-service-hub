@@ -55,7 +55,7 @@ Login is the first request. Send it before the others so Postman keeps the `acce
 
 ## Install and run
 
-Setup details live in `backend/README.md` and `frontend/README.md`.
+A new clone does not need the live database. `backend/README.md` starts a local Postgres with Docker, then creates the tables and the admin. Follow that setup, then:
 
 ```bash
 cd backend && npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run start:dev

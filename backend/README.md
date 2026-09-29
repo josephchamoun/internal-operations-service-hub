@@ -26,8 +26,8 @@ This may take a couple of minutes the first time.
 Create a `.env` file in `backend/` (copy `.env.example` if present):
 
 ```bash
-# Database (required). Neon PostgreSQL for a real run.
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+# Local Postgres from docker-compose.test.yml. A clone uses this. The live site sets its own DATABASE_URL on the host.
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ops_hub_test?sslmode=disable"
 
 # Session tokens (required)
 JWT_SECRET=<any long random string>
@@ -75,15 +75,30 @@ Only `DATABASE_URL`, `JWT_SECRET`, and `JWT_EXPIRES_IN` are required to boot the
 
 ### How do I set up the database (Prisma + PostgreSQL)?
 
+A clone does not need the live database. Docker starts an empty Postgres on your computer.
+
+1. Install Docker Desktop and wait until it is running.
+2. From this `backend` folder:
+
+```bash
+docker compose -f docker-compose.test.yml up -d
+```
+
+The first run downloads Postgres 16. It creates database `ops_hub_test` on `localhost:5433` with user `postgres` and password `postgres`. The data disappears when the container stops. Comments in `.env` must start with `#`.
+
+3. Copy `.env.example` to `.env` if you have not already. `DATABASE_URL` and `TEST_DATABASE_URL` in that example already point at this database. Set `JWT_SECRET` to any long random string. Set `HEALTH_PASSWORD` to any password you choose. Microsoft, Gmail, and Groq can stay empty. Email-and-password sign-in and saving a request still work.
+
+4. Create the tables and the admin:
+
 ```bash
 npx prisma generate   # generates the Prisma client from prisma/schema.prisma
 npx prisma db push    # applies schema.prisma to the database in DATABASE_URL
 npx prisma db seed    # creates Jordan Admin only if that user is missing
 ```
 
-`prisma/schema.prisma` is the source of truth for the tables (`Team`, `TeamMembership`, `Category`, `Priority`, `User`, `Request`, `Message`, `Attachment`, `RequestEvent`, `Silence`, `AccessLog`). The provider is `postgresql`. A real run uses Neon. The release command `db:setup` is `prisma db push` followed by `prisma db seed`.
+`prisma/schema.prisma` is the source of truth for the tables (`Team`, `TeamMembership`, `Category`, `Priority`, `User`, `Request`, `Message`, `Attachment`, `RequestEvent`, `Silence`, `AccessLog`). The provider is `postgresql`. The live site uses its own database on the host. This local database is the one a clone uses. The release command `db:setup` is `prisma db push` followed by `prisma db seed`. `npm run verify:release` from the repo root uses `TEST_DATABASE_URL` and replaces the rows in this same database, so run that when you want the tests, not while you are keeping requests you just created.
 
-Seed does not rewrite an admin who is already there, and it does not create teams, categories, or other people. The admin's email and password are in `prisma/seed.ts`.
+Seed does not rewrite an admin who is already there, and it does not create teams, categories, or other people. The admin's email and password are in `prisma/seed.ts`. After you sign in, create a team, a category, and a priority from the admin pages, then submit a request.
 
 **To inspect the database visually:** `npx prisma studio` opens a browser UI against `DATABASE_URL`. Day-to-day admin work (users, teams, categories, priorities) is also available in the frontend admin pages.
 
@@ -124,7 +139,7 @@ Starts the NestJS server in watch mode — it restarts automatically whenever yo
 
 ### What URL do I open?
 
-While editing, the website is the Vite app at `http://localhost:5173`, and it calls the API at `http://localhost:3000`. After `npm run verify:release`, or any build that produces `frontend/dist`, the API process also serves that built website, so `http://localhost:3000` is the site and the API together. The live site works the same way: one address for both.
+While editing, start the website from the `frontend` folder in a second terminal: `npm install`, then `npm run dev`. Open `http://localhost:5173`. It calls the API at `http://localhost:3000`. Sign in as Jordan Admin. The email and password are in `prisma/seed.ts`. After `npm run verify:release`, or any build that produces `frontend/dist`, the API process also serves that built website, so `http://localhost:3000` is the site and the API together. The live site works the same way: one address for both.
 
 ## Authentication
 
@@ -149,7 +164,7 @@ Sets the cookie and returns `{ "ok": true }`. The email is the address on the us
 
 ## Current stage and limitations
 
-Storage: PostgreSQL via Prisma (`prisma/schema.prisma`, `DATABASE_URL` on Neon). Attachments are bytes in that same database.
+Storage: PostgreSQL via Prisma (`prisma/schema.prisma`, `DATABASE_URL`). A clone uses the local Docker database above. The live site sets its own `DATABASE_URL` on the host. Attachments are bytes in that same database.
 
 Auth: Microsoft, or email and password. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
 
@@ -304,7 +319,7 @@ npm run test:db       # integration spec, then end-to-end tests. Needs TEST_DATA
 
 ## Why PostgreSQL
 
-The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. Neon holds the real data. `npm run verify:release` uses the Docker practice database from `docker-compose.test.yml`, through `TEST_DATABASE_URL`.
+The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. A clone uses the Docker Postgres from `docker-compose.test.yml`. The live site sets its own `DATABASE_URL` on the host. `npm run verify:release` uses `TEST_DATABASE_URL` and replaces the rows in that same local database.
 
 ## File structure
 
