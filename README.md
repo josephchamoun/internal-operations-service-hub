@@ -1,6 +1,6 @@
 # Internal Operations Service Hub
 
-A single, trackable entry point for internal employee requests, starting with IT and HR. Employees submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox.
+A single, trackable entry point for internal employee requests, starting with IT and HR. Users submit a request once, it lands automatically with the right team, and nothing gets lost in DMs, hallway conversations, or the wrong inbox.
 
 ## What the running app is
 
