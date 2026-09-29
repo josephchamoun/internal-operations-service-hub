@@ -125,7 +125,7 @@ export class RequestsService {
     void this.notificationsService.notifyTeam(
       created.owningTeamId,
       `New request: ${created.subject}`,
-      `A new request has landed in your team's queue.\n\nSubject: ${created.subject}\nCategory: ${created.categoryId}`,
+      `A new request has landed in your team's queue.\n\nSubject: ${created.subject}\nCategory: ${category.name}`,
     );
 
     return created;
