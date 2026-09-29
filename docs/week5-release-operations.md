@@ -32,7 +32,7 @@ If `TEST_DATABASE_URL` is missing, the command stops. It does not use `DATABASE_
 
 The command does not call Microsoft. It does not send mail.
 
-Seed creates one admin, Jordan Admin, and only when that user is missing. If the admin is already there, seed prints `Admin already exists. Skipping seed.` and leaves every existing row as it is.
+Seed creates the `Other` category, the `Normal` priority, and Jordan Admin, each only when that row is missing. If the admin is already there, seed prints `Admin already exists. Skipping admin seed.` and does not change that user.
 
 On your computer, set `TEST_DATABASE_URL` to a Postgres you can wipe. The live Neon URL stays in `DATABASE_URL` and this command does not use it.
 
@@ -41,16 +41,12 @@ On your computer, set `TEST_DATABASE_URL` to a Postgres you can wipe. The live N
 A new machine needs this setup before the command will run:
 
 1. Node.js and npm.
-2. Docker Desktop, running. An existing Postgres install can replace it.
+2. PostgreSQL 16, running on port `5432`. On Windows, use the installer from the PostgreSQL site and remember the `postgres` user password.
 3. `npm install` in `backend` and in `frontend`.
-4. `backend/.env`, copied from `backend/.env.example`. Set `JWT_SECRET` to any long random string. `TEST_DATABASE_URL` is already `postgresql://postgres:postgres@localhost:5433/ops_hub_test?sslmode=disable`. Comments in that file must start with `#`.
-5. The practice database, started from the repo root:
+4. `backend/.env`, copied from `backend/.env.example`. Set `JWT_SECRET` to any long random string. Replace `YOUR_PASSWORD` in `DATABASE_URL` and `TEST_DATABASE_URL`. Comments in that file must start with `#`.
+5. Two databases on that server: `ops_hub` for the app, and `ops_hub_test` for this command. Create them in pgAdmin. From the `backend` folder, `npx prisma db push` and `npx prisma db seed` prepare `ops_hub`.
 
-```bash
-docker compose -f backend/docker-compose.test.yml up -d
-```
-
-That starts Postgres 16 with user `postgres`, password `postgres`, and database `ops_hub_test` on port `5433`. The first run downloads the image. The data disappears when the container stops. The real Neon password stays in `backend/.env` and this command does not use it.
+`npm run verify:release` uses `ops_hub_test` only. It creates the tables there, runs the seed, and the tests replace rows in that database. Shutting down the computer does not delete either database. The live database password is not in the repo. It is sent to the instructors by email.
 
 ## 4. Release configuration
 

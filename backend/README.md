@@ -26,8 +26,9 @@ This may take a couple of minutes the first time.
 Create a `.env` file in `backend/` (copy `.env.example` if present):
 
 ```bash
-# Local Postgres from docker-compose.test.yml. A clone uses this. The live site sets its own DATABASE_URL on the host.
-DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ops_hub_test?sslmode=disable"
+# Local PostgreSQL on port 5432. Replace YOUR_PASSWORD with the password chosen when Postgres was installed.
+# The live site sets its own DATABASE_URL on the host.
+DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/ops_hub?sslmode=disable"
 
 # Session tokens (required)
 JWT_SECRET=<any long random string>
@@ -75,32 +76,24 @@ Only `DATABASE_URL`, `JWT_SECRET`, and `JWT_EXPIRES_IN` are required to boot the
 
 ### How do I set up the database (Prisma + PostgreSQL)?
 
-A clone does not need the live database. Docker starts an empty Postgres on your computer.
+A clone does not need the live database. Install PostgreSQL on your computer. It keeps the data when the laptop shuts down.
 
-1. Install Docker Desktop and wait until it is running.
-2. From this `backend` folder:
-
-```bash
-docker compose -f docker-compose.test.yml up -d
-```
-
-The first run downloads Postgres 16. It creates database `ops_hub_test` on `localhost:5433` with user `postgres` and password `postgres`. The data disappears when the container stops. Comments in `.env` must start with `#`.
-
-3. Copy `.env.example` to `.env` if you have not already. `DATABASE_URL` and `TEST_DATABASE_URL` in that example already point at this database. Set `JWT_SECRET` to any long random string. Set `HEALTH_PASSWORD` to any password you choose. Microsoft, Gmail, and Groq can stay empty. Email-and-password sign-in and saving a request still work.
-
-4. Create the tables and the admin:
+1. Install PostgreSQL 16 and leave the service running. On Windows, use the installer from the PostgreSQL site. Remember the password you choose for the `postgres` user. The server listens on port `5432`. The installer includes pgAdmin.
+2. In pgAdmin, connect as `postgres` and create two databases: `ops_hub` and `ops_hub_test`. `ops_hub` is the one the app uses. `ops_hub_test` is only for `npm run verify:release`.
+3. Copy `.env.example` to `.env`. Replace `YOUR_PASSWORD` in `DATABASE_URL` and `TEST_DATABASE_URL` with that install password. Set `JWT_SECRET` to any long random string. Set `HEALTH_PASSWORD` to any password you choose. Microsoft, Gmail, and Groq can stay empty. Email-and-password sign-in and saving a request still work. Comments in `.env` must start with `#`.
+4. Create the tables and the admin in `ops_hub`:
 
 ```bash
 npx prisma generate   # generates the Prisma client from prisma/schema.prisma
 npx prisma db push    # applies schema.prisma to the database in DATABASE_URL
-npx prisma db seed    # creates Jordan Admin only if that user is missing
+npx prisma db seed    # creates Other, Normal, and Jordan Admin when each is missing
 ```
 
-`prisma/schema.prisma` is the source of truth for the tables (`Team`, `TeamMembership`, `Category`, `Priority`, `User`, `Request`, `Message`, `Attachment`, `RequestEvent`, `Silence`, `AccessLog`). The provider is `postgresql`. The live site uses its own database on the host. This local database is the one a clone uses. The release command `db:setup` is `prisma db push` followed by `prisma db seed`. `npm run verify:release` from the repo root uses `TEST_DATABASE_URL` and replaces the rows in this same database, so run that when you want the tests, not while you are keeping requests you just created.
+`prisma/schema.prisma` is the source of truth for the tables (`Team`, `TeamMembership`, `Category`, `Priority`, `User`, `Request`, `Message`, `Attachment`, `RequestEvent`, `Silence`, `AccessLog`). The provider is `postgresql`. The live site uses its own database on the host. This local `ops_hub` database is the one a clone uses. The release command `db:setup` is `prisma db push` followed by `prisma db seed`. `npm run verify:release` from the repo root uses `TEST_DATABASE_URL`, so it builds and clears rows in `ops_hub_test` and leaves `ops_hub` alone.
 
-Seed does not rewrite an admin who is already there, and it does not create teams, categories, or other people. The admin's email and password are in `prisma/seed.ts`. After you sign in, create a team, a category, and a priority from the admin pages, then submit a request.
+Seed creates the `Other` category and the `Normal` priority when those rows are missing, and Jordan Admin when that user is missing. It does not rewrite an admin who is already there, and it does not create teams or other people. The admin's email and password are in `prisma/seed.ts`. After you sign in, create a team and any extra categories from the admin pages, then submit a request.
 
-**To inspect the database visually:** `npx prisma studio` opens a browser UI against `DATABASE_URL`. Day-to-day admin work (users, teams, categories, priorities) is also available in the frontend admin pages.
+**To inspect the local database:** from this folder, run `npx prisma studio`. It opens a browser page with the tables and rows in `DATABASE_URL`. pgAdmin shows the same tables.
 
 ### Setting up real login (Microsoft Entra ID) — optional
 
@@ -156,7 +149,7 @@ POST /api/auth/password
 
 Sets the cookie and returns `{ "ok": true }`. The email is the address on the user row. The hub stores a bcrypt hash, never the password. A wrong email, a wrong password, or a user with no hash all return `401` with `Invalid email or password.` A matching hash on an inactive user returns the usual inactive-account error. This route is limited to 5 attempts per minute per IP address.
 
-`npx prisma db seed` creates Jordan Admin only when that user is missing. It does not reset anyone's password. The admin email and password are in `prisma/seed.ts`. An admin can set or change a password on the user form. Leaving it blank on edit keeps the current hash. Leaving it blank on create means that person can sign in with Microsoft only.
+`npx prisma db seed` creates the `Other` category, the `Normal` priority, and Jordan Admin when each is missing. It does not reset anyone's password. The admin email and password are in `prisma/seed.ts`. An admin can set or change a password on the user form. Leaving it blank on edit keeps the current hash. Leaving it blank on create means that person can sign in with Microsoft only.
 
 **Real login, via Microsoft Entra ID** (only if configured, see above):
 
@@ -164,7 +157,7 @@ Sets the cookie and returns `{ "ok": true }`. The email is the address on the us
 
 ## Current stage and limitations
 
-Storage: PostgreSQL via Prisma (`prisma/schema.prisma`, `DATABASE_URL`). A clone uses the local Docker database above. The live site sets its own `DATABASE_URL` on the host. Attachments are bytes in that same database.
+Storage: PostgreSQL via Prisma (`prisma/schema.prisma`, `DATABASE_URL`). A clone uses a local PostgreSQL database named `ops_hub`. The live site sets its own `DATABASE_URL` on the host. Attachments are bytes in that same database.
 
 Auth: Microsoft, or email and password. Every route requires a valid JWT, from the httpOnly cookie or from `Authorization: Bearer`; the request-lifecycle actions (claim, unclaim, cancel, reassign, change status/priority) additionally enforce specific authorization rules based on who's authenticated and their relationship to the request (see the endpoint table below). Client-supplied `actorId` fields no longer exist anywhere — the actor is always read from that JWT.
 
@@ -263,7 +256,7 @@ All errors follow Nest's standard shape:
 
 ## Reference data
 
-`prisma db seed` creates Jordan Admin only, and only when that user is missing. Teams, categories, priorities, and everyone else are rows an admin maintains in the app. The long tests build their own teams, categories, and users on the practice database, including `dev-employee` and `dev-manager`. Those two are not created by the seed.
+`prisma db seed` creates the `Other` category, the `Normal` priority, and Jordan Admin, each only when that row is missing. Teams and everyone else are rows an admin maintains in the app. The long tests build their own teams, categories, and users on the practice database, including `dev-employee` and `dev-manager`. Those two are not created by the seed.
 
 `GET /teams`, `/categories`, and `/priorities` read whatever rows are in the database. `GET /users` is admin-only.
 
@@ -279,7 +272,9 @@ In Postman, choose **Import**, then **Link**, and paste that address. Saving the
 
 Login is the first request. Send it first. The response is `{ "ok": true }` and the session is the `access_token` cookie. Postman's cookie jar sends that cookie on the later requests. The requests call `https://internal-operations-service-hub.onrender.com`. For a local API, change the host to `http://localhost:3000`.
 
-The health request is Basic auth. The file has `replacethis` and `replacethispass`. Replace those with `HEALTH_USER` and `HEALTH_PASSWORD` from the environment before sending it.
+The password saved in the login request is the seed password from `prisma/seed.ts`. That password works on a local database after seed. It does not open the live site. Change it to the live admin password before you call the live API.
+
+The health request is Basic auth. The file has `replacethis` and `replacethispass`. Replace those with the live health username and password before sending it. The live admin password, the live health username and password, and the live database password are not in this repo. They are in the email sent to the instructors. Use the admin and health values from that email.
 
 The same steps by hand, with the `/api` prefix:
 
@@ -315,11 +310,11 @@ npm run test:ai-eval  # intake suggestion cases, with the model mocked
 npm run test:db       # integration spec, then end-to-end tests. Needs TEST_DATABASE_URL.
 ```
 
-`npm test` does not open a database. `npm run verify:release` from the repo root runs setup, both builds, the typecheck, the unit tests, the AI evals, and `test:db`. It uses `TEST_DATABASE_URL` only. Before that command: install dependencies here and in `frontend`, copy `.env.example` to `.env`, set `JWT_SECRET`, start Docker Desktop, then run `docker compose -f docker-compose.test.yml up -d` from this folder. That container is Postgres 16, database `ops_hub_test`, on `localhost:5433`. The full list is in the root `README.md`. The end-to-end files are `test/requests.e2e-spec.ts`, `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`, `test/admin.e2e-spec.ts`, and `test/rate-limit.e2e-spec.ts`. HTTP routes in those tests are under `/api`, except `GET /health`.
+`npm test` does not open a database. `npm run verify:release` from the repo root runs setup, both builds, the typecheck, the unit tests, the AI evals, and `test:db`. It uses `TEST_DATABASE_URL` only. It does not install packages. Before that command, run `npm install` in this folder and `npm install` in `frontend`. Skipping the frontend install makes the website build stop with `'tsc' is not recognized`. Also install PostgreSQL, create database `ops_hub_test`, copy `.env.example` to `.env`, and set `JWT_SECRET` and `YOUR_PASSWORD`. The full list is in the root `README.md`. The end-to-end files are `test/requests.e2e-spec.ts`, `test/messages.e2e-spec.ts`, `test/silence.e2e-spec.ts`, `test/admin.e2e-spec.ts`, and `test/rate-limit.e2e-spec.ts`. HTTP routes in those tests are under `/api`, except `GET /health`.
 
 ## Why PostgreSQL
 
-The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. A clone uses the Docker Postgres from `docker-compose.test.yml`. The live site sets its own `DATABASE_URL` on the host. `npm run verify:release` uses `TEST_DATABASE_URL` and replaces the rows in that same local database.
+The Week 2 version used flat JSON files as a stand-in database, so that swapping in a real one later would touch each module's `*.repository.ts` and not the service or controller. Every `*.repository.ts` now calls `PrismaService`. The database is PostgreSQL, which matches the relational model in `data-model.md` and ADR-001. A clone uses a local PostgreSQL database named `ops_hub`. The live site sets its own `DATABASE_URL` on the host. `npm run verify:release` uses `TEST_DATABASE_URL` and replaces the rows in `ops_hub_test`.
 
 ## File structure
 
@@ -330,7 +325,7 @@ backend/
 │   │                             #   Priority, User, Request, Message, Attachment,
 │   │                             #   RequestEvent, Silence, AccessLog
 │   ├── migrations/              # older migration history; release setup uses db push
-│   └── seed.ts                  # creates Jordan Admin only if missing
+│   └── seed.ts                  # Other, Normal, and Jordan Admin if each is missing
 ├── src/
 │   ├── main.ts                   # bootstraps the app, global validation pipe
 │   ├── app.module.ts             # root module, wires every feature module together

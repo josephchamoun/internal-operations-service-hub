@@ -8,11 +8,32 @@ const ADMIN_PASSWORD = 'OpsHub2026';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.category.upsert({
+    where: { categoryId: 'other' },
+    update: {},
+    create: {
+      categoryId: 'other',
+      name: 'Other',
+      defaultTeamId: null,
+      createdAt: new Date(),
+    },
+  });
+
+  await prisma.priority.upsert({
+    where: { priorityId: 'Normal' },
+    update: {},
+    create: {
+      priorityId: 'Normal',
+      name: 'Normal',
+      escalationWindowMinutes: 1440,
+    },
+  });
+
   const existing = await prisma.user.findFirst({
     where: { OR: [{ userId: ADMIN_ID }, { email: ADMIN_EMAIL }] },
   });
   if (existing) {
-    console.log('Admin already exists. Skipping seed.');
+    console.log('Admin already exists. Skipping admin seed.');
     return;
   }
 

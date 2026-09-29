@@ -29,7 +29,9 @@ Download it from this link:
 
 In Postman, choose **Import**, then **Link**, and paste that address. The same file can be saved from the browser and imported with **File**.
 
-Login is the first request. Send it before the others so Postman keeps the `access_token` cookie. The health request uses Basic auth. Replace `replacethis` and `replacethispass` with `HEALTH_USER` and `HEALTH_PASSWORD` from the environment. Those two values are not in the file.
+Login is the first request. Send it before the others so Postman keeps the `access_token` cookie. The password saved in that request is the seed password from `backend/prisma/seed.ts`. That password works on a local database after seed. It does not open the live site. Change it to the live admin password before you call the live API.
+
+The health request uses Basic auth. Replace `replacethis` and `replacethispass` with the live health username and password. The live admin password, the live health username and password, and the live database password are not in this repo. They are in the email sent to the instructors. Use the admin and health values from that email.
 
 ## What has been built
 
@@ -55,14 +57,14 @@ Login is the first request. Send it before the others so Postman keeps the `acce
 
 ## Install and run
 
-A new clone does not need the live database. `backend/README.md` starts a local Postgres with Docker, then creates the tables and the admin. Follow that setup, then:
+A new clone does not need the live database. `backend/README.md` installs local PostgreSQL, creates database `ops_hub`, then creates the tables and the admin. Follow that setup, then:
 
 ```bash
 cd backend && npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run start:dev
 cd frontend && npm install && npm run dev
 ```
 
-Seed creates one admin, Jordan Admin, and only when that user is missing. It does not rewrite people who are already in the database. The admin's email and password are in `backend/prisma/seed.ts`.
+Seed creates the `Other` category, the `Normal` priority, and Jordan Admin, each only when that row is missing. It does not rewrite people who are already in the database. The admin's email and password are in `backend/prisma/seed.ts`.
 
 `npm run start:dev` is for editing: the API restarts when you save a file. After a release build, `npm --prefix backend run start:prod` runs the compiled API (`node dist/main`) and does not watch files.
 
@@ -70,11 +72,27 @@ Seed creates one admin, Jordan Admin, and only when that user is missing. It doe
 
 The live site is `https://internal-operations-service-hub.onrender.com`. The same address serves the website and the API. Data routes are under `/api`. `GET /health` is not.
 
-Sign in with email and password. Seed creates one admin, Jordan Admin, only when that user is missing. The email and password are in `backend/prisma/seed.ts`. Microsoft sign-in is optional.
+Sign in with email and password. On a local database, seed creates Jordan Admin only when that user is missing, and the email and password are in `backend/prisma/seed.ts`. That seed password does not open the live site. The live admin password is in the email sent to the instructors. Microsoft sign-in is optional.
 
 ## Operations
 
-The monitor is a second process. It is how you watch health over time. From the repo root, with `HEALTH_USER` and `HEALTH_PASSWORD` set:
+The monitor is a second process. It is how you watch health over time. Run it from the repo root, or from the `backend` folder. Copy `backend/.env.example` to `backend/.env` first. For a local API, set `JWT_SECRET`, `DATABASE_URL`, and `HEALTH_PASSWORD`. Microsoft, Gmail, and Groq can stay empty. For the live site, `HEALTH_USER` and `HEALTH_PASSWORD` in that file must be the pair from the instructor email. A different password makes every check `401`.
+
+Command Prompt:
+
+```bat
+set HEALTH_URL=https://internal-operations-service-hub.onrender.com/health
+npm run monitor
+```
+
+PowerShell:
+
+```powershell
+$env:HEALTH_URL="https://internal-operations-service-hub.onrender.com/health"
+npm run monitor
+```
+
+Mac or Linux:
 
 ```bash
 HEALTH_URL=https://internal-operations-service-hub.onrender.com/health npm run monitor
@@ -84,16 +102,16 @@ It prints `ok` while the API is up. After three failures in a row it prints `ALE
 
 ## Tests
 
-`npm run verify:release` from the repo root is the one check before a release. It creates tables, runs the seed, builds both apps, typechecks, and runs every test, including the long ones. It uses `TEST_DATABASE_URL` only. It does not read `DATABASE_URL`, so it does not touch Neon.
+`npm run verify:release` from the repo root is the one check before a release. It creates tables, runs the seed, builds both apps, typechecks, and runs every test, including the long ones. It uses `TEST_DATABASE_URL` only. It does not read `DATABASE_URL`, so it does not touch the live database. It does not install packages. Install the backend and the frontend first. If the frontend install was skipped, the website build stops with `'tsc' is not recognized`.
 
 To run it on a new machine:
 
 1. Install Node.js and npm.
-2. Install Docker Desktop and wait until it is running. An existing Postgres install can replace Docker. Point `TEST_DATABASE_URL` at a database you can wipe.
-3. From the repo root, install both apps: `cd backend && npm install`, then `cd ../frontend && npm install`.
-4. Copy `backend/.env.example` to `backend/.env`. Set `JWT_SECRET` to any long random string. The long tests boot the API, and the API refuses to start without it. `TEST_DATABASE_URL` is already filled in the example. Leave `DATABASE_URL` unused for this command. Notes in that file must start with `#`. Docker Compose reads `backend/.env` and rejects `//` comments.
-5. From the repo root, start the practice database: `docker compose -f backend/docker-compose.test.yml up -d`. The first run downloads Postgres 16. It creates database `ops_hub_test` on `localhost:5433` with user `postgres` and password `postgres`.
-6. From the repo root, run `npm run verify:release`.
+2. Install PostgreSQL 16 and leave it running. On Windows, use the installer from the PostgreSQL site. Remember the password for the `postgres` user. The server listens on port `5432`.
+3. From the repo root, install both apps. Both are required: `cd backend && npm install`, then `cd ../frontend && npm install`.
+4. Copy `backend/.env.example` to `backend/.env`. Set `JWT_SECRET` to any long random string. Replace `YOUR_PASSWORD` in both database URLs. The long tests boot the API, and the API refuses to start without `JWT_SECRET`. Notes in that file must start with `#`.
+5. In pgAdmin, create two databases on that server: `ops_hub` for the app, and `ops_hub_test` for this command. From the `backend` folder, run `npx prisma db push` and `npx prisma db seed` so `ops_hub` has tables and Jordan Admin.
+6. From the repo root, run `npm run verify:release`. It uses `ops_hub_test` only.
 
 ## Host
 
