@@ -135,7 +135,7 @@ There is no restart code. Resume on Render is the recovery. It runs `npm run sta
 
 ### Known good state
 
-Signed in on the live site as Jordan Admin (`admin-1@chamounjoseph2022outlook.onmicrosoft.com`, password in `backend/prisma/seed.ts`). Created one request and left its page open. The browser address is the request that must still open after recovery.
+Signed in on the live site as Admin. Created one request and left its page open. The browser address is the request that must still open after recovery.
 
 In a second terminal, from the repo root, with `HEALTH_USER` and `HEALTH_PASSWORD` already in `backend/.env`.
 
